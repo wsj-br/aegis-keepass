@@ -16,6 +16,11 @@ import argparse
 import json
 import os
 import sys
+import subprocess
+import shlex
+import threading
+import time
+import socket
 from datetime import datetime
 from pathlib import Path
 from difflib import SequenceMatcher
@@ -27,9 +32,10 @@ from flask import Flask, render_template_string, request, jsonify
 # Import from main sync script
 from aegis_keepass_sync import (
     AegisParser, KeePassParser, EntryMatcher,
-    KeePassUpdater, create_backup, AegisEntry, KeePassEntry,
+    KeePassUpdater, AegisEntry, KeePassEntry,
     AegisDecryptor, CRYPTO_AVAILABLE
 )
+
 
 app = Flask(__name__)
 
@@ -176,9 +182,6 @@ def apply():
     if not app_data['keepass_path'] or not app_data['tree']:
         return jsonify({'error': 'No KeePass file loaded'}), 400
     
-    # Create backup
-    backup_path = create_backup(app_data['keepass_path'])
-    
     # Build list of all matches (automatic + manual)
     all_matches = []
     
@@ -221,12 +224,13 @@ def apply():
         if changes['fields_added'] or changes['fields_updated']:
             updated_count += 1
     
-    # Save
-    updater.save(app_data['keepass_path'])
+    # Save to output path
+    output_path = app_data.get('output_path', app_data['keepass_path'])
+    updater.save(output_path)
     
     return jsonify({
         'success': True,
-        'backup_path': backup_path,
+        'output_path': output_path,
         'updated_entries': updated_count,
         'total_matches': len(all_matches)
     })
@@ -296,7 +300,7 @@ INDEX_TEMPLATE = '''
     
     <script>
         async function applyChanges() {
-            if (!confirm("This will modify your KeePass XML file. A backup will be created. Continue?")) {
+            if (!confirm("This will save the merged KeePass XML to a new file. Continue?")) {
                 return;
             }
             
@@ -304,7 +308,7 @@ INDEX_TEMPLATE = '''
             const result = await response.json();
             
             if (result.success) {
-                alert(`Success! Updated ${result.updated_entries} entries.\\nBackup: ${result.backup_path}`);
+                alert(`Success! Updated ${result.updated_entries} entries.\\nMerged file: ${result.output_path}`);
             } else {
                 alert('Error: ' + result.error);
             }
@@ -350,6 +354,10 @@ UNMATCHED_TEMPLATE = '''
     <div class="back"><a href="/">← Back to Dashboard</a></div>
     <h1>Unmatched Aegis Entries</h1>
     <p>Select a KeePass entry to match with each Aegis OTP entry.</p>
+
+    <div style="margin-top: 10px; margin-bottom: 10px;">
+        <a href="/" class="btn btn-skip" style="text-decoration: none; display: inline-block; padding: 10px 20px;">Return to Dashboard</a>
+    </div>
     
     {% for entry in entries %}
     <div class="entry" id="entry-{{ entry.uuid }}">
@@ -382,6 +390,10 @@ UNMATCHED_TEMPLATE = '''
         </div>
     </div>
     {% endfor %}
+    
+    <div style="margin-top: 30px; margin-bottom: 30px;">
+        <a href="/" class="btn btn-skip" style="text-decoration: none; display: inline-block; padding: 10px 20px;">Return to Dashboard</a>
+    </div>
     
     <script>
         async function matchEntry(aegisUuid, keepassUuid) {
@@ -467,6 +479,21 @@ MATCHED_TEMPLATE = '''
 </body>
 </html>
 '''
+def open_browser(url: str) -> None:
+    """Auto-open the browser to the specified URL."""
+    try:
+        if sys.platform == "darwin":
+            subprocess.Popen(["open", url], stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL)
+        elif sys.platform == "win32":
+            subprocess.Popen(["cmd", "/c", "start", "", url], stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL)
+        else:
+            browser = os.environ.get("BROWSER")
+            if browser:
+                subprocess.Popen(f"{browser} {shlex.quote(url)}", shell=True, stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL)
+            else:
+                subprocess.Popen(["xdg-open", url], stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL)
+    except Exception as err:
+        print(f"[editor] Failed to open browser: {err}", file=sys.stderr)
 
 
 def main():
@@ -481,6 +508,7 @@ def main():
     parser.add_argument('--host', default='0.0.0.0', help='Host to bind (default: 0.0.0.0)')
     parser.add_argument('--port', type=int, default=5000, help='Port to bind (default: 5000)')
     parser.add_argument('--password-file', type=str, help='Path to file containing Aegis backup password')
+    parser.add_argument('--output', type=str, help='Output path for modified XML (default: write to <input>-merged.xml)')
     args = parser.parse_args()
 
     # Verify files
@@ -535,14 +563,47 @@ def main():
     ]
     app_data['unmatched'] = unmatched
     app_data['keepass_path'] = args.keepass
+    if args.output:
+        app_data['output_path'] = args.output
+    else:
+        kp_path_obj = Path(args.keepass)
+        app_data['output_path'] = str(kp_path_obj.with_name(f"{kp_path_obj.stem}-merged{kp_path_obj.suffix}"))
     
     print(f"\n  Auto-matched: {len(matches)}")
     print(f"  Unmatched: {len(unmatched)}")
     
-    print(f"\nStarting web server at http://{args.host}:{args.port}")
+    port = args.port
+    max_port = port + 50
+    success = False
+    
+    for current_port in range(port, max_port):
+        try:
+            with socket.socket(socket.AF_INET, socket.SOCK_STREAM) as s:
+                s.bind((args.host, current_port))
+            port = current_port
+            success = True
+            break
+        except OSError:
+            print(f"Port {current_port} is already in use, trying next port...")
+            continue
+            
+    if not success:
+        print(f"Error: No available port found in the range {args.port} to {max_port - 1}.", file=sys.stderr)
+        sys.exit(1)
+        
+    url_host = '127.0.0.1' if args.host == '0.0.0.0' else args.host
+    url = f"http://{url_host}:{port}"
+    
+    print(f"\nStarting web server at {url}")
     print("Press Ctrl+C to stop")
     
-    app.run(host=args.host, port=args.port, debug=False)
+    def trigger_browser():
+        time.sleep(1)
+        open_browser(url)
+        
+    threading.Thread(target=trigger_browser, daemon=True).start()
+    
+    app.run(host=args.host, port=port, debug=False)
 
 
 if __name__ == '__main__':

@@ -194,6 +194,7 @@ These fields are compatible with KeePass plugins like:
 3. **Conflict Detection**: Automatically handles and warns about duplicate matches (e.g., one KeePass entry matched to multiple Aegis entries)
 4. **UUID Tracking**: Stores Aegis UUID in the Notes field to guarantee absolute precision on future syncs
 5. **Execution Logs**: Automatically saves the full console output to a log file for review
+6. **Secure Deletion**: After usage, use `clean_data.sh` to securely delete the original Aegis backup, KeePass XML files, logs and reports
 
 ## Sample Output
 
@@ -234,22 +235,23 @@ Ensure KeePass XML export format is "KeePass XML (2.x)"
 
 ## Security Notes
 
-- **Backups are decrypted in memory** - no temporary decrypted files are ever created
-- If you use `--password-file`, ensure the file has restrictive permissions (`chmod 600`)
-- The tool writes to a new merged file (e.g., `keepass-merged.xml`), keeping your original database file completely safe
-- Run in dry-run mode first to review changes
+- Ensure the Aegis backup file and the original KeePass XML files have restrictive permissions (`chmod 600`)
+- **Backups are decrypted in memory** — no temporary decrypted files are ever created
+- If you use `--password-file`, ensure that file also has restrictive permissions (`chmod 600`)
+- The tool writes the output to a new merged file (e.g., `keepass-merged.xml`) with restrictive permissions, keeping your original database file completely safe
+- Run in dry-run mode first to preview and review changes
 
 ## Workflow Summary
 
 ```
-┌─────────────────┐                                    ┌─────────────────┐
-│  Aegis Backup   │───────────────────────────────────▶│                 │
-│  (encrypted)    │        Decrypt (in-memory)         │  Python Sync    │
-└─────────────────┘                                    │  Tool           │
-                                                       │  (this tool)    │
-┌─────────────────┐                                    │                 │
-│  KeePass XML    │◄───────────────────────────────────│                 │
-│  (with OTP)     │                                    └─────────────────┘
+┌─────────────────┐                        ┌──────────────────────┐                                 
+│  Aegis Backup   │───────────────────────>|                      │                                 
+│  (encrypted)    │  Decrypt (in-memory)   │                      │       ┌────────────────────────┐
+└─────────────────┘                        │  aegis_keepass_sync  │──────>|  Merged KeePass XML    │
+                                           │     (this tool)      │       │       (with OTP)       │
+┌─────────────────┐                        │                      │       └────────────────────────┘
+│  KeePass XML    │───────────────────────>|                      │                                 
+│  (original)     │                        └──────────────────────┘                                 
 └─────────────────┘
 ```
 

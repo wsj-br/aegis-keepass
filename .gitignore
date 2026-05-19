@@ -17,6 +17,9 @@ __pycache__/
 # Logs
 *.log
 
+# Temporary files
+*.tmp
+
 # Sensitive local configurations/secrets
 *password*
 .env
