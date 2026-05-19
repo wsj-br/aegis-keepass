@@ -470,8 +470,13 @@ MATCHED_TEMPLATE = '''
 
 
 def main():
+    if not CRYPTO_AVAILABLE:
+        print("ERROR: The 'cryptography' library is required to decrypt Aegis backups.")
+        print("Please install it with: pip install cryptography")
+        sys.exit(1)
+
     parser = argparse.ArgumentParser(description='Web UI for Aegis-KeePass OTP Sync')
-    parser.add_argument('--aegis', required=True, help='Path to Aegis backup (encrypted or decrypted JSON)')
+    parser.add_argument('--aegis', required=True, help='Path to encrypted Aegis backup JSON')
     parser.add_argument('--keepass', required=True, help='Path to KeePass XML')
     parser.add_argument('--host', default='0.0.0.0', help='Host to bind (default: 0.0.0.0)')
     parser.add_argument('--port', type=int, default=5000, help='Port to bind (default: 5000)')
@@ -497,9 +502,8 @@ def main():
 
     # Check if file is encrypted
     is_encrypted = AegisDecryptor.is_encrypted(args.aegis)
-    if is_encrypted and not CRYPTO_AVAILABLE:
-        print("ERROR: Encrypted Aegis backup detected but 'cryptography' library is not installed.")
-        print("Install it with: pip install cryptography")
+    if not is_encrypted:
+        print("ERROR: Only encrypted Aegis backup files are supported.")
         sys.exit(1)
 
     # Load data

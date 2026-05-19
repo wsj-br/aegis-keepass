@@ -6,13 +6,12 @@ Synchronizes TOTP secrets from Aegis Authenticator backup files into KeePass XML
 Matches entries using fuzzy string matching on name/issuer fields.
 
 Usage:
-    # With already-decrypted JSON file
-    python3 aegis-keepass-sync.py --aegis aegis-decrypted.json --keepass keepass.xml --dry-run
-    python3 aegis-keepass-sync.py --aegis aegis-decrypted.json --keepass keepass.xml --apply
+    # With encrypted Aegis backup (will prompt for password)
+    python3 aegis_keepass_sync.py --aegis aegis-backup.json --keepass keepass.xml --dry-run
+    python3 aegis_keepass_sync.py --aegis aegis-backup.json --keepass keepass.xml --apply
 
-    # With encrypted Aegis backup (auto-decrypt)
-    python3 aegis-keepass-sync.py --aegis aegis-backup.json --keepass keepass.xml --dry-run --password-file pass.txt
-    python3 aegis-keepass-sync.py --aegis aegis-backup.json --keepass keepass.xml --apply
+    # With encrypted Aegis backup and password file
+    python3 aegis_keepass_sync.py --aegis aegis-backup.json --keepass keepass.xml --apply --password-file pass.txt
 """
 
 import argparse
@@ -300,32 +299,31 @@ class AegisParser:
         # Check if file is encrypted
         is_encrypted = AegisDecryptor.is_encrypted(filepath)
 
-        if is_encrypted:
-            print(f"  Detected encrypted Aegis backup: {filepath}")
+        if not is_encrypted:
+            print("ERROR: Only encrypted Aegis backup files are supported.")
+            sys.exit(1)
 
-            if not CRYPTO_AVAILABLE:
-                print("ERROR: Encrypted Aegis backup detected but 'cryptography' library is not installed.")
-                print("Install it with: pip install cryptography")
-                sys.exit(1)
+        print(f"  Detected encrypted Aegis backup: {filepath}")
 
-            # Get password if not provided
-            if password is None:
-                password = getpass.getpass("Enter Aegis backup password: ")
+        if not CRYPTO_AVAILABLE:
+            print("ERROR: The 'cryptography' library is required to decrypt Aegis backups.")
+            print("Please install it with: pip install cryptography")
+            sys.exit(1)
 
-            # Decrypt the file
-            try:
-                data = AegisDecryptor.decrypt_file(filepath, password)
-                print("  Successfully decrypted Aegis backup")
-            except RuntimeError as e:
-                print(f"ERROR: Failed to decrypt Aegis backup: {e}")
-                sys.exit(1)
-            except ValueError as e:
-                print(f"ERROR: Invalid vault file: {e}")
-                sys.exit(1)
-        else:
-            # Load decrypted JSON directly
-            with open(filepath, 'r', encoding='utf-8') as f:
-                data = json.load(f)
+        # Get password if not provided
+        if password is None:
+            password = getpass.getpass("Enter Aegis backup password: ")
+
+        # Decrypt the file
+        try:
+            data = AegisDecryptor.decrypt_file(filepath, password)
+            print("  Successfully decrypted Aegis backup")
+        except RuntimeError as e:
+            print(f"ERROR: Failed to decrypt Aegis backup: {e}")
+            sys.exit(1)
+        except ValueError as e:
+            print(f"ERROR: Invalid vault file: {e}")
+            sys.exit(1)
 
         entries = []
         for entry_data in data.get('entries', []):
@@ -906,17 +904,16 @@ class Tee:
 
 
 def main():
+    if not CRYPTO_AVAILABLE:
+        print("ERROR: The 'cryptography' library is required to decrypt Aegis backups.")
+        print("Please install it with: pip install cryptography")
+        sys.exit(1)
+
     parser = argparse.ArgumentParser(
-        description='Sync OTP secrets from Aegis to KeePass XML',
+        description='Sync OTP secrets from encrypted Aegis backup to KeePass XML',
         formatter_class=argparse.RawDescriptionHelpFormatter,
         epilog="""
 Examples:
-  # Preview changes (dry run) with decrypted file
-  python3 %(prog)s --aegis aegis-decrypted.json --keepass keepass.xml --dry-run
-
-  # Apply changes with backup (decrypted file)
-  python3 %(prog)s --aegis aegis-decrypted.json --keepass keepass.xml --apply
-
   # Use encrypted Aegis backup (will prompt for password)
   python3 %(prog)s --aegis aegis-backup-encrypted.json --keepass keepass.xml --dry-run
 
@@ -927,20 +924,20 @@ Examples:
     )
 
     parser.add_argument('--aegis', required=True,
-                       help='Path to Aegis backup file (can be encrypted or decrypted JSON)')
+                       help='Path to encrypted Aegis backup file')
     parser.add_argument('--keepass', required=True,
                        help='Path to KeePass XML file')
     parser.add_argument('--dry-run', action='store_true',
                        help='Preview changes without applying them')
     parser.add_argument('--apply', action='store_true',
-                       help='Apply changes to KeePass XML (creates backup)')
+                       help='Apply changes to KeePass XML')
 
     parser.add_argument('--report', type=str,
                        help='Path to save JSON report')
     parser.add_argument('--output', type=str,
                        help='Output path for modified XML (default: write to <input>-merged.xml)')
     parser.add_argument('--password-file', type=str,
-                       help='Path to file containing Aegis backup password (for encrypted backups)')
+                       help='Path to file containing Aegis backup password')
 
     args = parser.parse_args()
 
