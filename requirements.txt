@@ -1,0 +1,11 @@
+# Aegis-KeePass Sync - Python Dependencies
+
+# For web interface only (aegis_keepass_web.py)
+flask>=2.0.0
+
+# Optional: For decrypting Aegis encrypted backups directly
+# If not installed, you must manually decrypt backups before processing
+cryptography>=3.0.0
+
+# Optional: For faster fuzzy matching
+# rapidfuzz>=2.0.0

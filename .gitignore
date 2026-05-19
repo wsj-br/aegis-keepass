@@ -1,0 +1,22 @@
+# Virtual Environment
+venv/
+.venv/
+env/
+
+# Python Cache & Runtime Artifacts
+__pycache__/
+*.pyc
+*.pyo
+*.pyd
+.pytest_cache/
+
+# Databases and configuration inputs/outputs (sensitive)
+*.xml
+*.json
+
+# Logs
+*.log
+
+# Sensitive local configurations/secrets
+*password*
+.env
