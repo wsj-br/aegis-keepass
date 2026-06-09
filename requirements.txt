@@ -1,6 +1,6 @@
-# Aegis-KeePass Sync - Python Dependencies
+# Aegis-KeePass OTP Sync - Python Dependencies
 
-# For web interface only (aegis_keepass_web.py)
+# Web interface: import, match, apply, merge (aegis_keepass_web.py)
 flask>=2.0.0
 
 # Optional: For decrypting Aegis encrypted backups directly

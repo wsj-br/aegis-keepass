@@ -1,33 +1,19 @@
 #!/usr/bin/env python3
 """
-Aegis-KeePass OTP Sync Tool
+Shared library for Aegis-KeePass OTP Sync.
 
-Synchronizes TOTP secrets from Aegis Authenticator backup files into KeePass XML entries.
-Matches entries using fuzzy string matching on name/issuer fields.
-
-Usage:
-    # With encrypted Aegis backup (will prompt for password)
-    python3 aegis_keepass_sync.py --aegis aegis-backup.json --keepass keepass.xml --dry-run
-    python3 aegis_keepass_sync.py --aegis aegis-backup.json --keepass keepass.xml --apply
-
-    # With encrypted Aegis backup and password file
-    python3 aegis_keepass_sync.py --aegis aegis-backup.json --keepass keepass.xml --apply --password-file pass.txt
+Parsers, entry matching, and applying imported OTP data to KeePass XML.
+Used by aegis_keepass_web.py.
 """
 
-import argparse
 import base64
-import binascii
 import getpass
 import json
 import os
 import re
-import shutil
-import struct
 import sys
 from dataclasses import dataclass, field
-from datetime import datetime
 from difflib import SequenceMatcher
-from pathlib import Path
 from typing import Any, Dict, List, Optional, Tuple
 from xml.etree import ElementTree as ET
 
@@ -249,8 +235,23 @@ class KeePassEntry:
     username: Optional[str] = None
     url: Optional[str] = None
     notes: Optional[str] = None
+    group_path: Optional[str] = None
+    in_recycle_bin: bool = False
+    in_history: bool = False
     strings: Dict[str, str] = field(default_factory=dict)
     xml_element: Optional[ET.Element] = None
+
+    @property
+    def is_matchable(self) -> bool:
+        """Whether this entry may be used for Aegis matching/selection."""
+        return not self.in_recycle_bin and not self.in_history
+
+    @property
+    def location_display(self) -> str:
+        """Full path: group hierarchy plus entry title."""
+        if self.group_path:
+            return f"{self.group_path} / {self.title}"
+        return self.title
     
     def has_otp(self) -> bool:
         """Check if entry already has OTP configuration."""
@@ -354,14 +355,82 @@ class KeePassParser:
     NAMESPACE = {'k': 'http:// KeePass.info/KeePass_XML/'}
     
     @staticmethod
-    def parse(filepath: str) -> Tuple[List[KeePassEntry], ET.ElementTree]:
-        """Parse KeePass XML file and return entries and the tree."""
+    def _build_parent_map(root: ET.Element) -> Dict[ET.Element, ET.Element]:
+        parent_map: Dict[ET.Element, ET.Element] = {}
+        for parent in root.iter():
+            for child in parent:
+                parent_map[child] = parent
+        return parent_map
+
+    @staticmethod
+    def _group_path_for_entry(entry_elem: ET.Element, parent_map: Dict[ET.Element, ET.Element]) -> Optional[str]:
+        names: List[str] = []
+        current = parent_map.get(entry_elem)
+        while current is not None:
+            if current.tag == 'Group':
+                name_elem = current.find('Name')
+                if name_elem is not None and name_elem.text:
+                    names.insert(0, name_elem.text)
+            current = parent_map.get(current)
+        return ' / '.join(names) if names else None
+
+    @staticmethod
+    def _find_recycle_bin_group(root: ET.Element) -> Optional[ET.Element]:
+        """Locate the recycle bin group using Meta/RecycleBinUUID."""
+        meta = root.find('Meta')
+        if meta is None:
+            return None
+        rb_uuid_elem = meta.find('RecycleBinUUID')
+        if rb_uuid_elem is None or not rb_uuid_elem.text:
+            return None
+        rb_uuid = rb_uuid_elem.text.strip()
+        for group in root.iter('Group'):
+            uuid_elem = group.find('UUID')
+            if uuid_elem is not None and uuid_elem.text == rb_uuid:
+                return group
+        return None
+
+    @staticmethod
+    def _entry_in_recycle_bin(
+        entry_elem: ET.Element,
+        parent_map: Dict[ET.Element, ET.Element],
+        recycle_bin_group: Optional[ET.Element],
+    ) -> bool:
+        """True if entry is inside the recycle bin group or any of its subgroups."""
+        if recycle_bin_group is None:
+            return False
+        current = parent_map.get(entry_elem)
+        while current is not None:
+            if current is recycle_bin_group:
+                return True
+            current = parent_map.get(current)
+        return False
+
+    @staticmethod
+    def _entry_in_history(
+        entry_elem: ET.Element,
+        parent_map: Dict[ET.Element, ET.Element],
+    ) -> bool:
+        """True if this Entry element is a History snapshot (not the live entry)."""
+        parent = parent_map.get(entry_elem)
+        return parent is not None and parent.tag == 'History'
+
+    @staticmethod
+    def matchable_entries(entries: List[KeePassEntry]) -> List[KeePassEntry]:
+        """Return live, non-recycle-bin entries eligible for Aegis matching."""
+        return [e for e in entries if e.is_matchable]
+
+    @staticmethod
+    def parse(filepath: str) -> Tuple[List[KeePassEntry], ET.ElementTree, int]:
+        """Parse KeePass XML file and return entries, tree, and recycle-bin entry count."""
         tree = ET.parse(filepath)
         root = tree.getroot()
-        
+        parent_map = KeePassParser._build_parent_map(root)
+        recycle_bin_group = KeePassParser._find_recycle_bin_group(root)
+
         entries = []
+        recycle_bin_count = 0
         
-        # Find all Entry elements anywhere in the tree
         for entry_elem in root.iter('Entry'):
             strings = {}
             title = None
@@ -394,18 +463,27 @@ class KeePassParser:
             uuid = uuid_elem.text if uuid_elem is not None else ''
             
             if title:  # Only add entries with a title
+                in_history = KeePassParser._entry_in_history(entry_elem, parent_map)
+                in_recycle_bin = KeePassParser._entry_in_recycle_bin(
+                    entry_elem, parent_map, recycle_bin_group
+                )
+                if in_recycle_bin:
+                    recycle_bin_count += 1
                 entry = KeePassEntry(
                     uuid=uuid,
                     title=title,
                     username=username,
                     url=url,
                     notes=notes,
+                    group_path=KeePassParser._group_path_for_entry(entry_elem, parent_map),
+                    in_recycle_bin=in_recycle_bin,
+                    in_history=in_history,
                     strings=strings,
                     xml_element=entry_elem
                 )
                 entries.append(entry)
         
-        return entries, tree
+        return entries, tree, recycle_bin_count
 
 
 class EntryMatcher:
@@ -488,153 +566,176 @@ class EntryMatcher:
         common = words1 & words2
         return len(common) > 0
 
+    def _find_best_for_aegis(
+        self,
+        aegis_entry: AegisEntry,
+        keepass_entries: List[KeePassEntry],
+        *,
+        use_uuid_match: bool = True,
+        exclude_with_aegis_uuid: bool = False,
+        excluded_keepass_uuids: Optional[set] = None,
+    ) -> Optional[MatchResult]:
+        """Find the best KeePass match for a single Aegis entry."""
+        best_match = None
+        best_confidence = 0.0
+        best_reason = ""
+        excluded = excluded_keepass_uuids or set()
+
+        aegis_id = aegis_entry.full_identifier
+        aegis_issuer = aegis_entry.issuer
+        aegis_name = aegis_entry.name
+        aegis_name_clean = self.clean_username(aegis_name, aegis_issuer)
+
+        aegis_domain = self.extract_base_domain(aegis_issuer) or self.extract_base_domain(aegis_name)
+        aegis_numbers = self.extract_numbers(aegis_issuer) | self.extract_numbers(aegis_name)
+
+        for kp_entry in keepass_entries:
+            if kp_entry.uuid in excluded:
+                continue
+
+            if exclude_with_aegis_uuid and kp_entry.get_aegis_uuid():
+                continue
+
+            kp_title = kp_entry.title or ''
+
+            if use_uuid_match:
+                existing_uuid = kp_entry.get_aegis_uuid()
+                if existing_uuid and existing_uuid.lower() == aegis_entry.uuid.lower():
+                    return MatchResult(
+                        aegis_entry=aegis_entry,
+                        keepass_entry=kp_entry,
+                        confidence=10.0,
+                        match_reason=f"UUID match ({aegis_entry.uuid})",
+                    )
+
+            scores = []
+            reasons = []
+
+            sim = self.similarity(aegis_id, kp_title)
+            if sim > 0.5:
+                scores.append(sim)
+                reasons.append(f"full_id vs title ({sim:.2f})")
+
+            sim = self.similarity(aegis_issuer, kp_title)
+            if sim > 0.6:
+                scores.append(sim)
+                reasons.append(f"issuer vs title ({sim:.2f})")
+
+            sim = self.similarity(aegis_name_clean, kp_title)
+            if sim > 0.6:
+                scores.append(sim)
+                reasons.append(f"name vs title ({sim:.2f})")
+
+            norm_issuer = self.normalize(aegis_issuer)
+            norm_title = self.normalize(kp_title)
+            if norm_issuer and norm_issuer in norm_title:
+                scores.append(0.8)
+                reasons.append("issuer in title")
+
+            norm_name = self.normalize(aegis_name_clean)
+            if norm_name and norm_name in norm_title:
+                scores.append(0.7)
+                reasons.append("name in title")
+
+            kp_domain_title = self.extract_base_domain(kp_title)
+            kp_domain_url = self.extract_base_domain(kp_entry.url)
+            if aegis_domain:
+                if aegis_domain == kp_domain_title or aegis_domain == kp_domain_url:
+                    scores.append(0.9)
+                    reasons.append(f"domain match ({aegis_domain})")
+
+            if self.share_distinct_word(aegis_issuer, kp_title):
+                scores.append(0.8)
+                reasons.append("shared distinct word in title")
+            elif self.share_distinct_word(aegis_issuer, kp_entry.url):
+                scores.append(0.7)
+                reasons.append("shared distinct word in url")
+
+            kp_numbers = self.extract_numbers(kp_title) | self.extract_numbers(kp_entry.username) | self.extract_numbers(kp_entry.notes)
+            common_nums = aegis_numbers & kp_numbers
+            if common_nums:
+                scores.append(0.95)
+                reasons.append(f"numeric match ({list(common_nums)[0]})")
+
+            has_service_match = any(r.startswith(("issuer", "domain", "numeric", "shared")) for r in reasons)
+            if not has_service_match:
+                scores = []
+                reasons = []
+
+            kp_username = kp_entry.username or ''
+            kp_username_clean = self.clean_username(kp_username, aegis_issuer)
+
+            if scores and kp_username_clean and aegis_name_clean:
+                norm_aegis_name = self.normalize(aegis_name_clean)
+                norm_kp_username = self.normalize(kp_username_clean)
+
+                if norm_aegis_name == norm_kp_username:
+                    scores.append(0.3)
+                    reasons.append("username exact match")
+                elif norm_aegis_name in norm_kp_username:
+                    scores.append(0.2)
+                    reasons.append("name in username")
+                elif norm_kp_username in norm_aegis_name:
+                    scores.append(0.2)
+                    reasons.append("username in name")
+
+            if scores:
+                confidence = max(scores)
+
+                if kp_username_clean and aegis_name_clean:
+                    norm_aegis_name = self.normalize(aegis_name_clean)
+                    norm_kp_username = self.normalize(kp_username_clean)
+                    if norm_aegis_name == norm_kp_username:
+                        confidence += 0.2
+                        reasons.append("username bonus")
+                    elif norm_aegis_name in norm_kp_username or norm_kp_username in norm_aegis_name:
+                        confidence += 0.1
+                        reasons.append("username partial bonus")
+
+                if confidence > best_confidence:
+                    best_confidence = confidence
+                    best_match = kp_entry
+                    best_reason = "; ".join(reasons)
+
+        if not best_match:
+            return None
+
+        return MatchResult(
+            aegis_entry=aegis_entry,
+            keepass_entry=best_match,
+            confidence=best_confidence,
+            match_reason=best_reason,
+        )
+
+    def suggest_match(
+        self,
+        aegis_entry: AegisEntry,
+        keepass_entries: List[KeePassEntry],
+        excluded_keepass_uuids: Optional[set] = None,
+    ) -> Optional[MatchResult]:
+        """Fuzzy-match one Aegis entry, ignoring existing AegisUUID markers in KeePass notes."""
+        return self._find_best_for_aegis(
+            aegis_entry,
+            keepass_entries,
+            use_uuid_match=False,
+            exclude_with_aegis_uuid=False,
+            excluded_keepass_uuids=excluded_keepass_uuids,
+        )
+
     def find_matches(self, aegis_entries: List[AegisEntry], 
                      keepass_entries: List[KeePassEntry]) -> Tuple[List[MatchResult], List[AegisEntry]]:
         """
         Match Aegis entries to KeePass entries.
+        Expects current entries only (KeePassParser.matchable_entries).
         Returns: (matches, unmatched_aegis_entries)
         """
         matches = []
         unmatched = []
         
         for aegis_entry in aegis_entries:
-            best_match = None
-            best_confidence = 0.0
-            best_reason = ""
-            
-            aegis_id = aegis_entry.full_identifier
-            aegis_issuer = aegis_entry.issuer
-            aegis_name = aegis_entry.name
-            aegis_name_clean = self.clean_username(aegis_name, aegis_issuer)
-            
-            aegis_domain = self.extract_base_domain(aegis_issuer) or self.extract_base_domain(aegis_name)
-            aegis_numbers = self.extract_numbers(aegis_issuer) | self.extract_numbers(aegis_name)
-            
-            for kp_entry in keepass_entries:
-                kp_title = kp_entry.title or ''
-                
-                # Check for existing Aegis UUID link
-                existing_uuid = kp_entry.get_aegis_uuid()
-                if existing_uuid and existing_uuid.lower() == aegis_entry.uuid.lower():
-                    # Direct UUID match - highest priority
-                    confidence = 10.0
-                    reason = f"UUID match ({aegis_entry.uuid})"
-                    best_confidence = confidence
-                    best_match = kp_entry
-                    best_reason = reason
-                    break  # Found exact UUID match, no need to look further!
-                
-                # Calculate various similarity scores
-                scores = []
-                reasons = []
-                
-                # Full identifier vs title
-                sim = self.similarity(aegis_id, kp_title)
-                if sim > 0.5:
-                    scores.append(sim)
-                    reasons.append(f"full_id vs title ({sim:.2f})")
-                
-                # Issuer only vs title
-                sim = self.similarity(aegis_issuer, kp_title)
-                if sim > 0.6:
-                    scores.append(sim)
-                    reasons.append(f"issuer vs title ({sim:.2f})")
-                
-                # Name only vs title
-                sim = self.similarity(aegis_name_clean, kp_title)
-                if sim > 0.6:
-                    scores.append(sim)
-                    reasons.append(f"name vs title ({sim:.2f})")
-                
-                # Check if issuer is contained in title
-                norm_issuer = self.normalize(aegis_issuer)
-                norm_title = self.normalize(kp_title)
-                if norm_issuer and norm_issuer in norm_title:
-                    scores.append(0.8)
-                    reasons.append("issuer in title")
-                
-                # Check if name is contained in title
-                norm_name = self.normalize(aegis_name_clean)
-                if norm_name and norm_name in norm_title:
-                    scores.append(0.7)
-                    reasons.append("name in title")
-                
-                # Base Domain match
-                kp_domain_title = self.extract_base_domain(kp_title)
-                kp_domain_url = self.extract_base_domain(kp_entry.url)
-                if aegis_domain:
-                    if aegis_domain == kp_domain_title or aegis_domain == kp_domain_url:
-                        scores.append(0.9)
-                        reasons.append(f"domain match ({aegis_domain})")
-                
-                # Shared brand word match (in title or URL)
-                if self.share_distinct_word(aegis_issuer, kp_title):
-                    scores.append(0.8)
-                    reasons.append("shared distinct word in title")
-                elif self.share_distinct_word(aegis_issuer, kp_entry.url):
-                    scores.append(0.7)
-                    reasons.append("shared distinct word in url")
-                
-                # Numeric account ID match
-                kp_numbers = self.extract_numbers(kp_title) | self.extract_numbers(kp_entry.username) | self.extract_numbers(kp_entry.notes)
-                common_nums = aegis_numbers & kp_numbers
-                if common_nums:
-                    scores.append(0.95)
-                    reasons.append(f"numeric match ({list(common_nums)[0]})")
-                
-                # Enforce service match. If there is no matching issuer, domain, shared distinct word,
-                # or numeric account ID, discard any matches to prevent incorrect username-only matches.
-                has_service_match = any(r.startswith(("issuer", "domain", "numeric", "shared")) for r in reasons)
-                if not has_service_match:
-                    scores = []
-                    reasons = []
-                
-                # Username matching (Aegis name vs KeePass username)
-                kp_username = kp_entry.username or ''
-                kp_username_clean = self.clean_username(kp_username, aegis_issuer)
-                
-                if scores and kp_username_clean and aegis_name_clean:
-                    norm_aegis_name = self.normalize(aegis_name_clean)
-                    norm_kp_username = self.normalize(kp_username_clean)
-                    
-                    # Exact username match - boost confidence
-                    if norm_aegis_name == norm_kp_username:
-                        scores.append(0.3)  # Boost for exact username match
-                        reasons.append("username exact match")
-                    # Username contained in Aegis name
-                    elif norm_aegis_name in norm_kp_username:
-                        scores.append(0.2)
-                        reasons.append("name in username")
-                    elif norm_kp_username in norm_aegis_name:
-                        scores.append(0.2)
-                        reasons.append("username in name")
-                
-                if scores:
-                    confidence = max(scores)
-                    
-                    # Boost confidence if username matches (important for disambiguation)
-                    if kp_username_clean and aegis_name_clean:
-                        norm_aegis_name = self.normalize(aegis_name_clean)
-                        norm_kp_username = self.normalize(kp_username_clean)
-                        if norm_aegis_name == norm_kp_username:
-                            confidence += 0.2  # Boost for exact username match
-                            reasons.append("username bonus")
-                        elif norm_aegis_name in norm_kp_username or norm_kp_username in norm_aegis_name:
-                            confidence += 0.1
-                            reasons.append("username partial bonus")
-                    
-                    if confidence > best_confidence:
-                        best_confidence = confidence
-                        best_match = kp_entry
-                        best_reason = "; ".join(reasons)
-            
-            if best_match:
-                matches.append(MatchResult(
-                    aegis_entry=aegis_entry,
-                    keepass_entry=best_match,
-                    confidence=best_confidence,
-                    match_reason=best_reason
-                ))
+            result = self._find_best_for_aegis(aegis_entry, keepass_entries)
+            if result:
+                matches.append(result)
             else:
                 unmatched.append(aegis_entry)
         
@@ -702,6 +803,11 @@ class EntryMatcher:
 
 class KeePassUpdater:
     """Updates KeePass XML with OTP data from Aegis entries."""
+
+    AEGIS_UUID_MARKER_PATTERN = re.compile(
+        r'AegisUUID:\s*[a-f0-9-]+\s*',
+        re.IGNORECASE,
+    )
     
     OTP_FIELDS = {
         'TimeOtp-Secret-Base32': 'secret',
@@ -712,6 +818,12 @@ class KeePassUpdater:
     
     def __init__(self, tree: ET.ElementTree):
         self.tree = tree
+
+    @classmethod
+    def _strip_all_aegis_markers(cls, notes: str) -> str:
+        """Remove every AegisUUID marker line from notes text."""
+        cleaned = cls.AEGIS_UUID_MARKER_PATTERN.sub('', notes or '')
+        return re.sub(r'\n{3,}', '\n\n', cleaned).strip()
     
     def update_entry(self, match: MatchResult, dry_run: bool = True) -> Dict:
         """Update a KeePass entry with OTP data from Aegis."""
@@ -781,12 +893,14 @@ class KeePassUpdater:
         
         if notes_elem is not None:
             current_notes = notes_elem.text or ''
-            if marker not in current_notes:
-                # Add marker to notes
-                if current_notes:
-                    notes_elem.text = f"{current_notes}\n\n{marker}"
-                else:
-                    notes_elem.text = marker
+            cleaned_notes = self._strip_all_aegis_markers(current_notes)
+            if cleaned_notes:
+                new_notes = f"{cleaned_notes}\n\n{marker}"
+            else:
+                new_notes = marker
+            if new_notes != current_notes:
+                notes_elem.text = new_notes
+                kp_entry.notes = new_notes
                 changes['notes_updated'] = True
         else:
             # Create Notes field
@@ -795,9 +909,57 @@ class KeePassUpdater:
             key_elem.text = 'Notes'
             value_elem = ET.SubElement(new_string, 'Value')
             value_elem.text = marker
+            kp_entry.notes = marker
             changes['notes_updated'] = True
         
         return changes
+
+    def remove_aegis_link(self, kp_entry: KeePassEntry, aegis_uuid: str) -> Dict:
+        """Remove AegisUUID marker and TimeOtp-* fields from a KeePass entry."""
+        xml_elem = kp_entry.xml_element
+        changes = {
+            'title': kp_entry.title,
+            'aegis_uuid': aegis_uuid,
+            'marker_removed': False,
+            'fields_removed': [],
+        }
+
+        if xml_elem is None:
+            return changes
+
+        otp_keys = set(self.OTP_FIELDS.keys())
+        for string_elem in list(xml_elem.findall('String')):
+            key_elem = string_elem.find('Key')
+            if key_elem is not None and key_elem.text in otp_keys:
+                xml_elem.remove(string_elem)
+                changes['fields_removed'].append(key_elem.text)
+                kp_entry.strings.pop(key_elem.text, None)
+
+        notes_elem = None
+        for string_elem in xml_elem.findall('String'):
+            key_elem = string_elem.find('Key')
+            if key_elem is not None and key_elem.text == 'Notes':
+                notes_elem = string_elem.find('Value')
+                break
+
+        if notes_elem is not None:
+            current_notes = notes_elem.text or ''
+            pattern = re.compile(
+                rf'AegisUUID:\s*{re.escape(aegis_uuid)}\s*',
+                re.IGNORECASE,
+            )
+            new_notes = pattern.sub('', current_notes)
+            new_notes = re.sub(r'\n{3,}', '\n\n', new_notes).strip()
+            if new_notes != current_notes:
+                notes_elem.text = new_notes if new_notes else ''
+                kp_entry.notes = new_notes if new_notes else None
+                changes['marker_removed'] = True
+
+        return changes
+
+    def apply_match(self, match: MatchResult) -> Dict:
+        """Apply OTP data and AegisUUID marker for a match."""
+        return self.update_entry(match, dry_run=False)
     
     def save(self, filepath: str):
         """Save the modified XML to file."""
@@ -809,234 +971,3 @@ class KeePassUpdater:
         except OSError:
             pass
 
-
-class ReportGenerator:
-    """Generates reports on matching results."""
-    
-    @staticmethod
-    def generate(matches: List[MatchResult], unmatched: List[AegisEntry], 
-                 output_path: Optional[str] = None) -> str:
-        """Generate a JSON report of matching results."""
-        report = {
-            'generated_at': datetime.now().isoformat(),
-            'summary': {
-                'total_aegis_entries': len(matches) + len(unmatched),
-                'matched_entries': len(matches),
-                'unmatched_entries': len(unmatched),
-                'match_rate': len(matches) / (len(matches) + len(unmatched)) * 100 if matches or unmatched else 0
-            },
-            'matches': [],
-            'unmatched': []
-        }
-        
-        for match in matches:
-            report['matches'].append({
-                'aegis_uuid': match.aegis_entry.uuid,
-                'aegis_display': match.aegis_entry.display_name,
-                'keepass_title': match.keepass_entry.title,
-                'keepass_uuid': match.keepass_entry.uuid,
-                'confidence': round(match.confidence, 2),
-                'reason': match.match_reason,
-                'has_existing_otp': match.keepass_entry.has_otp()
-            })
-        
-        for entry in unmatched:
-            report['unmatched'].append({
-                'uuid': entry.uuid,
-                'display': entry.display_name,
-                'issuer': entry.issuer,
-                'name': entry.name
-            })
-        
-        if output_path:
-            with open(output_path, 'w', encoding='utf-8') as f:
-                json.dump(report, f, indent=2)
-        
-        return json.dumps(report, indent=2)
-    
-    @staticmethod
-    def print_summary(matches: List[MatchResult], unmatched: List[AegisEntry]):
-        """Print a human-readable summary to console."""
-        total = len(matches) + len(unmatched)
-        
-        print("\n" + "="*60)
-        print("AEGIS-KEEPASS SYNC REPORT")
-        print("="*60)
-        print(f"\nTotal Aegis entries: {total}")
-        print(f"Matched entries: {len(matches)} ({len(matches)/total*100:.1f}%)")
-        print(f"Unmatched entries: {len(unmatched)} ({len(unmatched)/total*100:.1f}%)")
-        
-        if matches:
-            print("\n--- MATCHED ENTRIES ---")
-            for match in matches:
-                status = "[UPDATE]" if match.keepass_entry.has_otp() else "[NEW]"
-                print(f"  {status} {match.aegis_entry.display_name}")
-                print(f"      → {match.keepass_entry.title}")
-                print(f"      Confidence: {match.confidence:.1%} ({match.match_reason})")
-        
-        if unmatched:
-            print("\n--- UNMATCHED ENTRIES ---")
-            for entry in unmatched:
-                print(f"  [SKIP] {entry.display_name}")
-        
-        print("\n" + "="*60)
-
-
-
-
-
-class Tee:
-    """Tee output stream helper to write to stdout/stderr and log file."""
-    def __init__(self, *files):
-        self.files = files
-
-    def write(self, obj):
-        for f in self.files:
-            f.write(obj)
-            f.flush()
-
-    def flush(self):
-        for f in self.files:
-            try:
-                f.flush()
-            except Exception:
-                pass
-
-
-def main():
-    if not CRYPTO_AVAILABLE:
-        print("ERROR: The 'cryptography' library is required to decrypt Aegis backups.")
-        print("Please install it with: pip install cryptography")
-        sys.exit(1)
-
-    parser = argparse.ArgumentParser(
-        description='Sync OTP secrets from encrypted Aegis backup to KeePass XML',
-        formatter_class=argparse.RawDescriptionHelpFormatter,
-        epilog="""
-Examples:
-  # Use encrypted Aegis backup (will prompt for password)
-  python3 %(prog)s --aegis aegis-backup-encrypted.json --keepass keepass.xml --dry-run
-
-  # Use encrypted Aegis backup with password from file
-  python3 %(prog)s --aegis aegis-backup-encrypted.json --keepass keepass.xml --apply --password-file pass.txt
-
-        """
-    )
-
-    parser.add_argument('--aegis', required=True,
-                       help='Path to encrypted Aegis backup file')
-    parser.add_argument('--keepass', required=True,
-                       help='Path to KeePass XML file')
-    parser.add_argument('--dry-run', action='store_true',
-                       help='Preview changes without applying them')
-    parser.add_argument('--apply', action='store_true',
-                       help='Apply changes to KeePass XML')
-
-    parser.add_argument('--report', type=str,
-                       help='Path to save JSON report')
-    parser.add_argument('--output', type=str,
-                       help='Output path for modified XML (default: write to <input>-merged.xml)')
-    parser.add_argument('--password-file', type=str,
-                       help='Path to file containing Aegis backup password')
-
-    args = parser.parse_args()
-
-    if not args.dry_run and not args.apply:
-        print("Error: Must specify either --dry-run or --apply")
-        parser.print_help()
-        sys.exit(1)
-
-    # Verify input files exist
-    if not os.path.exists(args.aegis):
-        print(f"Error: Aegis file not found: {args.aegis}")
-        sys.exit(1)
-
-    if not os.path.exists(args.keepass):
-        print(f"Error: KeePass file not found: {args.keepass}")
-        sys.exit(1)
-
-    # Set up console logging to file
-    timestamp = datetime.now().strftime('%Y%m%d_%H%M%S')
-    log_filename = f"aegis-keepass-sync-{timestamp}.log"
-    log_file = open(log_filename, 'w', encoding='utf-8')
-    
-    orig_stdout = sys.stdout
-    orig_stderr = sys.stderr
-    
-    sys.stdout = Tee(sys.stdout, log_file)
-    sys.stderr = Tee(sys.stderr, log_file)
-
-    try:
-        # Read password from file if provided
-        password = None
-        if args.password_file:
-            if not os.path.exists(args.password_file):
-                print(f"Error: Password file not found: {args.password_file}")
-                sys.exit(1)
-            with open(args.password_file, 'r', encoding='utf-8') as f:
-                password = f.read().strip()
-
-        # Parse input files
-        print(f"Loading Aegis entries from: {args.aegis}")
-        aegis_entries = AegisParser.parse(args.aegis, password=password)
-        print(f"  Found {len(aegis_entries)} TOTP entries")
-        
-        print(f"Loading KeePass entries from: {args.keepass}")
-        keepass_entries, tree = KeePassParser.parse(args.keepass)
-        print(f"  Found {len(keepass_entries)} password entries")
-        
-        # Match entries
-        print("\nMatching entries...")
-        matcher = EntryMatcher()
-        matches, unmatched = matcher.find_matches(aegis_entries, keepass_entries)
-        
-        # Generate report
-        ReportGenerator.print_summary(matches, unmatched)
-        
-        # Always save report with timestamp
-        if args.report:
-            report_path_obj = Path(args.report)
-            report_path = str(report_path_obj.with_name(f"{report_path_obj.stem}-{timestamp}{report_path_obj.suffix}"))
-        else:
-            report_path = f"matching-report-{timestamp}.json"
-            
-        report_json = ReportGenerator.generate(matches, unmatched, report_path)
-        print(f"\nReport saved to: {report_path}")
-        
-        # Apply changes if requested
-        if args.apply:
-            if not matches:
-                print("\nNo matches to apply.")
-                sys.exit(0)
-            
-            # Update entries
-            print("\nApplying changes...")
-            updater = KeePassUpdater(tree)
-            
-            for match in matches:
-                changes = updater.update_entry(match, dry_run=False)
-                if changes['fields_added'] or changes['fields_updated']:
-                    action = "Added" if changes['fields_added'] else "Updated"
-                    print(f"  {action} OTP for: {changes['title']}")
-            
-            # Save output - do not overwrite input by default
-            if args.output:
-                output_path = args.output
-            else:
-                kp_path_obj = Path(args.keepass)
-                output_path = str(kp_path_obj.with_name(f"{kp_path_obj.stem}-merged{kp_path_obj.suffix}"))
-                
-            updater.save(output_path)
-            print(f"\nSaved to: {output_path}")
-        
-        print("\nDone!")
-
-    finally:
-        sys.stdout = orig_stdout
-        sys.stderr = orig_stderr
-        log_file.close()
-        print(f"Log saved to: {log_filename}")
-
-
-if __name__ == '__main__':
-    main()
