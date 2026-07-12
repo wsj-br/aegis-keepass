@@ -52,6 +52,8 @@ After download or **End session**, all session data is securely wiped from serve
 | `wsgi.py` | Gunicorn application entry point |
 | `Dockerfile` | Container image (Python 3.12, non-root user) |
 | `docker-compose.yml` | Local deployment on `127.0.0.1:8080` |
+| `app/_version.py` | Application version (single source of truth) |
+| `scripts/release.sh` | Create GitHub release and trigger Docker CI |
 
 ## Configuration
 
@@ -110,7 +112,7 @@ These are KeePass 2.x native TOTP fields, compatible with KeePassXC and Keepass2
 - **In-memory processing** — Typical backups are held in wipeable buffers and never written to disk
 - **Secure wipe on session end** — Sensitive buffers are overwritten with random data, then zeroed, when you download or end the session
 - **No server-side retention** — The merged database is streamed to your browser; the server does not keep a copy
-- **Localhost only** — Docker Compose binds port `8080` to `127.0.0.1`, not all interfaces
+- **Localhost-only host binding (with provided Compose file)** — Gunicorn listens on `0.0.0.0:8080` inside the container (normal for Docker port forwarding). The included `docker-compose.yml` maps that to **`127.0.0.1:8080` on the host**, so other machines cannot reach the app unless you change the port mapping (e.g. to `8080:8080`)
 - **Hardened container** — Non-root user, read-only filesystem, tmpfs for temporary files
 - **Session cookies** — HttpOnly and SameSite=Strict; there is no login layer (intended for trusted localhost use)
 - **Health check** — `GET /health` returns `200 OK` for container orchestration
@@ -133,6 +135,32 @@ gunicorn --bind 127.0.0.1:8080 --workers 1 --timeout 120 wsgi:app
 ```
 
 Open [http://localhost:8080](http://localhost:8080). Use a single worker so in-memory session state stays consistent.
+
+## Releasing
+
+Version is defined in [`app/_version.py`](app/_version.py). Tag conventions:
+
+| Layer | Format | Example |
+|-------|--------|---------|
+| Git tag / GitHub Release | `vX.Y.Z` | `v0.1.0` |
+| Docker image tag | `X.Y.Z` | `0.1.0` |
+| `app/_version.py` / UI footer | `X.Y.Z` | `0.1.0` |
+
+To publish a release:
+
+1. Bump `__version__` in `app/_version.py`
+2. Write `release-notes/RELEASE_NOTES_<version>.md`
+3. Commit the changes
+4. Run `./scripts/release.sh` (use `--dry-run` first to validate)
+
+The script creates a GitHub Release (`vX.Y.Z`), which triggers CI to build and publish multi-arch Docker images to `ghcr.io/wsj-br/aegis-keepass`.
+
+### Pull published image
+
+```bash
+docker pull ghcr.io/wsj-br/aegis-keepass:latest
+docker run --rm -p 127.0.0.1:8080:8080 ghcr.io/wsj-br/aegis-keepass:latest
+```
 
 ## Troubleshooting
 

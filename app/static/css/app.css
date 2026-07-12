@@ -626,3 +626,29 @@ tr.modified { box-shadow: inset 3px 0 0 var(--warning); }
 .toast.show { display: block; }
 .toast.success { background: var(--success); }
 .toast.error { background: var(--danger); }
+
+.site-footer {
+    border-top: 1px solid var(--border);
+    margin-top: 32px;
+    padding: 20px 0 32px;
+}
+
+.footer-inner {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    gap: 16px;
+    padding-bottom: 0;
+    font-size: 0.85rem;
+    color: var(--muted);
+}
+
+.site-footer a {
+    color: var(--primary);
+    text-decoration: none;
+}
+
+.site-footer a:hover {
+    color: var(--primary-hover);
+    text-decoration: underline;
+}

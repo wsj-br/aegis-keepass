@@ -1,5 +1,9 @@
 FROM python:3.12-slim
 
+ARG VERSION=dev
+LABEL org.opencontainers.image.source="https://github.com/wsj-br/aegis-keepass"
+LABEL org.opencontainers.image.version="${VERSION}"
+
 WORKDIR /app
 
 RUN groupadd --gid 1000 app && \

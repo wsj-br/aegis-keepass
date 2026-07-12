@@ -6,6 +6,10 @@ import os
 
 from flask import Flask
 
+from app._version import __version__
+
+GITHUB_REPO_URL = "https://github.com/wsj-br/aegis-keepass"
+
 
 def create_app() -> Flask:
     app = Flask(__name__)
@@ -19,6 +23,13 @@ def create_app() -> Flask:
         SESSION_TIMEOUT_SECONDS=int(os.environ.get('SESSION_TIMEOUT_SECONDS', 1800)),
         MAX_IN_MEMORY_UPLOAD_BYTES=int(os.environ.get('MAX_IN_MEMORY_UPLOAD_BYTES', 32 * 1024 * 1024)),
     )
+
+    @app.context_processor
+    def inject_app_meta():
+        return {
+            'app_version': __version__,
+            'github_repo_url': GITHUB_REPO_URL,
+        }
 
     from app.routes.health import bp as health_bp
     from app.routes.upload import bp as upload_bp
