@@ -1,11 +1,10 @@
 # Aegis-KeePass OTP Sync - Python Dependencies
 
 # Web interface: import, match, apply, merge (aegis_keepass_web.py)
-flask>=2.0.0
+flask>=3.1.0
 
-# Optional: For decrypting Aegis encrypted backups directly
-# If not installed, you must manually decrypt backups before processing
-cryptography>=3.0.0
+# For decrypting Aegis encrypted backups directly
+cryptography>=49.0.0
 
-# Optional: For faster fuzzy matching
-# rapidfuzz>=2.0.0
+# For faster fuzzy matching
+rapidfuzz>=3.14.0

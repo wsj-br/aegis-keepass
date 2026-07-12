@@ -13,9 +13,10 @@ import os
 import re
 import sys
 from dataclasses import dataclass, field
-from difflib import SequenceMatcher
 from typing import Any, Dict, List, Optional, Tuple
 from xml.etree import ElementTree as ET
+
+from rapidfuzz import fuzz
 
 # Optional cryptography library for Aegis decryption
 try:
@@ -504,7 +505,7 @@ class EntryMatcher:
         """Calculate similarity between two strings."""
         if not a or not b:
             return 0.0
-        return SequenceMatcher(None, self.normalize(a), self.normalize(b)).ratio()
+        return fuzz.ratio(self.normalize(a), self.normalize(b)) / 100.0
 
     @staticmethod
     def extract_base_domain(text: str) -> Optional[str]:
