@@ -147,10 +147,24 @@ Open [http://localhost:8080](http://localhost:8080). Use a single worker so in-m
 ## Workflow
 
 ```
-┌─────────────────┐     upload      ┌──────────────────────┐   download   ┌────────────────────────┐
-│  Aegis Backup   │────────────────>│  Web App (Docker)    │─────────────>│  keepass-merged.kdbx   │
-│  (encrypted)    │   + .kdbx       │  match · apply       │  (browser)   │  (replace in KeePass)  │
-└─────────────────┘                 └──────────────────────┘              └────────────────────────┘
+                    upload
+┌─────────────────┐         ┌─────────────────┐
+│  Aegis Backup   │         │  KeePass .kdbx  │
+│  (encrypted)    │         │                 │
+└────────┬────────┘         └────────┬────────┘
+         │                           │
+         └─────────────┬─────────────┘
+                       ▼
+           ┌──────────────────────┐
+           │  Web App (Docker)    │
+           │  match · apply       │
+           └──────────┬───────────┘
+                      │ download (browser)
+                      ▼
+           ┌────────────────────────┐
+           │  keepass-merged.kdbx   │
+           │  (replace in KeePass)  │
+           └────────────────────────┘
 ```
 
 ## License
