@@ -149,9 +149,11 @@ Version is defined in [`app/_version.py`](app/_version.py). Tag conventions:
 To publish a release:
 
 1. Bump `__version__` in `app/_version.py`
-2. Write `release-notes/RELEASE_NOTES_<version>.md`
+2. Write `release-notes/RELEASE_NOTES_<version>.md` — use [`dev/release-new-version-prompt.md`](dev/release-new-version-prompt.md) when preparing notes and updating `dev/CHANGELOG.md`
 3. Commit the changes
 4. Run `./scripts/release.sh` (use `--dry-run` first to validate)
+
+See [`dev/DEVEL.md`](dev/DEVEL.md) for the full release checklist.
 
 The script creates a GitHub Release (`vX.Y.Z`), which triggers CI to build and publish multi-arch Docker images to `ghcr.io/wsj-br/aegis-keepass`.
 

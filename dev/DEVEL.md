@@ -1,0 +1,279 @@
+# Developer guide
+
+This document covers setting up a development environment, cloning the repository, building, testing, and publishing a release of Aegis-KeePass OTP Sync.
+
+## Prerequisites
+
+| Tool | Purpose | Notes |
+|------|---------|-------|
+| **Git** | Clone and version control | |
+| **Python 3.12+** | Local runs (matches the Docker image) | `python3 --version` |
+| **Docker** + **Docker Compose** | Container builds and local Compose runs | Required for release image verification |
+| **GitHub CLI (`gh`)** | Create GitHub Releases | Required only for publishing |
+
+Optional but recommended:
+
+- A virtual environment tool (`venv`, included with Python)
+- SSH key or HTTPS credentials for GitHub
+
+### Install tools (Ubuntu / Debian)
+
+```bash
+sudo apt update
+sudo apt install -y git python3 python3-venv python3-pip
+
+# Docker Engine + Compose plugin (see https://docs.docker.com/engine/install/)
+# Example for Ubuntu — follow the official docs for your distro:
+#   https://docs.docker.com/engine/install/ubuntu/
+
+# GitHub CLI (see https://cli.github.com/)
+# Example:
+#   sudo apt install -y gh
+```
+
+Authenticate the GitHub CLI before releasing:
+
+```bash
+gh auth login
+```
+
+## Clone the repository
+
+```bash
+git clone git@github.com:wsj-br/aegis-keepass.git
+cd aegis-keepass
+```
+
+HTTPS alternative:
+
+```bash
+git clone https://github.com/wsj-br/aegis-keepass.git
+cd aegis-keepass
+```
+
+## Install the development environment
+
+From the repository root:
+
+```bash
+python3 -m venv .venv
+source .venv/bin/activate
+pip install --upgrade pip
+pip install -r requirements.txt
+```
+
+Dependencies are listed in `requirements.txt` (Flask, cryptography, RapidFuzz, Gunicorn, pykeepass).
+
+Deactivate the venv when finished:
+
+```bash
+deactivate
+```
+
+## Build / run
+
+This project is a Python Flask app. There is no separate compile step for application code. “Build” means installing Python packages locally and/or building the Docker image.
+
+### Local (venv + Gunicorn)
+
+```bash
+source .venv/bin/activate
+gunicorn --bind 127.0.0.1:8080 --workers 1 --timeout 120 wsgi:app
+```
+
+Open [http://localhost:8080](http://localhost:8080).
+
+Use a **single worker** so in-memory session state stays consistent across requests.
+
+Useful environment variables (optional):
+
+| Variable | Default | Description |
+|----------|---------|-------------|
+| `SESSION_TIMEOUT_SECONDS` | `1800` | Idle session timeout |
+| `MAX_IN_MEMORY_UPLOAD_BYTES` | `33554432` | In-RAM upload threshold (32 MB) |
+| `MAX_UPLOAD_BYTES` | `52428800` | Maximum upload size (50 MB) |
+| `FLASK_SECRET_KEY` | *(random per start)* | Set explicitly for stable cookies across restarts |
+
+Example:
+
+```bash
+export FLASK_SECRET_KEY=dev-secret
+gunicorn --bind 127.0.0.1:8080 --workers 1 --timeout 120 wsgi:app
+```
+
+### Docker Compose (recommended smoke environment)
+
+```bash
+docker compose up --build
+```
+
+Open [http://localhost:8080](http://localhost:8080). Stop with `Ctrl+C` or:
+
+```bash
+docker compose down
+```
+
+### Docker image only
+
+```bash
+docker build -t aegis-keepass:dev .
+docker run --rm -p 127.0.0.1:8080:8080 aegis-keepass:dev
+```
+
+## Test
+
+There is currently **no automated unit/integration test suite** in the repository. Before committing or releasing, run the checks below.
+
+### 1. Syntax / import check
+
+With the venv activated:
+
+```bash
+python -m compileall -q aegis_keepass_lib.py app wsgi.py
+python -c "from app import create_app; create_app(); print('OK')"
+```
+
+### 2. Health endpoint
+
+With the app running (venv or Docker):
+
+```bash
+curl -sf http://127.0.0.1:8080/health && echo
+```
+
+Expect HTTP 200.
+
+### 3. Manual smoke test (UI)
+
+1. Start the app (`gunicorn` or `docker compose up --build`).
+2. Open [http://localhost:8080](http://localhost:8080).
+3. Upload an **encrypted** Aegis `.json` backup and a KeePass `.kdbx` (use copies of real files; keep originals safe).
+4. Enter passwords (and keyfile if required).
+5. Confirm matches on the review page; try a manual link if needed.
+6. Download `keepass-merged.kdbx` and open it in KeePassXC / KeePass to verify TOTP fields.
+7. Confirm **End session** clears the session and returns you to upload.
+
+### 4. Container health check
+
+After `docker compose up --build`:
+
+```bash
+docker compose ps
+```
+
+Confirm the service is healthy (the image defines a `HEALTHCHECK` against `/health`).
+
+## Publish a new release
+
+Version is defined in a single place: [`app/_version.py`](../app/_version.py).
+
+| Layer | Format | Example |
+|-------|--------|---------|
+| Git tag / GitHub Release | `vX.Y.Z` | `v0.1.0` |
+| Docker image tag | `X.Y.Z` | `0.1.0` |
+| `app/_version.py` / UI footer | `X.Y.Z` | `0.1.0` |
+
+Publishing a GitHub Release triggers [`.github/workflows/docker-release.yml`](../.github/workflows/docker-release.yml), which builds multi-arch images (`linux/amd64`, `linux/arm64`) and pushes them to `ghcr.io/wsj-br/aegis-keepass`.
+
+### Preparing release notes
+
+Before running the release script, use [`dev/release-new-version-prompt.md`](release-new-version-prompt.md) when preparing a new version. Paste that prompt into Cursor (or another agent) to:
+
+- Create `release-notes/RELEASE_NOTES_X.Y.Z.md` from the `[Unreleased]` section in `dev/CHANGELOG.md`
+- Move changelog entries into a versioned section with today's date
+- Match the format of prior release notes (highlights, Docker pull/run snippet)
+
+Confirm the prerequisites listed in the prompt (version bump, notes file, clean tree) before continuing with the checklist below.
+
+### Release checklist
+
+1. **Bump the version** in `app/_version.py`:
+
+   ```python
+   __version__ = "X.Y.Z"
+   ```
+
+2. **Write release notes** at `release-notes/RELEASE_NOTES_X.Y.Z.md`. Use [`dev/release-new-version-prompt.md`](release-new-version-prompt.md) for the full workflow (changelog → notes file, format, and checklist).
+
+3. **Commit** on a clean tree (usually on `main`):
+
+   ```bash
+   git status
+   git add app/_version.py release-notes/RELEASE_NOTES_X.Y.Z.md
+   git commit -m "Release X.Y.Z"
+   git push origin HEAD
+   ```
+
+4. **Validate** the release script (no side effects):
+
+   ```bash
+   ./scripts/release.sh --dry-run
+   ```
+
+5. **Publish**:
+
+   ```bash
+   ./scripts/release.sh
+   ```
+
+   Requirements for the script:
+
+   - `gh` authenticated (`gh auth login`)
+   - Clean working tree (or pass `--verify-clean=false`)
+   - `app/_version.py` and matching `release-notes/RELEASE_NOTES_<version>.md`
+   - Remote `origin` configured
+
+   What the script does:
+
+   - Reads version from `app/_version.py`
+   - Creates annotated tag `vX.Y.Z` at `HEAD` (recreates tag/release if they already exist)
+   - Creates a GitHub Release with the notes file
+   - CI then builds and publishes Docker images
+
+6. **Watch CI**:
+
+   - Actions: https://github.com/wsj-br/aegis-keepass/actions
+   - Confirm the image appears on GHCR
+
+### Pull and verify the published image
+
+```bash
+docker pull ghcr.io/wsj-br/aegis-keepass:X.Y.Z
+docker run --rm -p 127.0.0.1:8080:8080 ghcr.io/wsj-br/aegis-keepass:X.Y.Z
+```
+
+Or use `latest` when the release was tagged as the newest:
+
+```bash
+docker pull ghcr.io/wsj-br/aegis-keepass:latest
+```
+
+### Release script options
+
+```bash
+./scripts/release.sh --help
+./scripts/release.sh --dry-run
+./scripts/release.sh --verify-clean=false   # skip clean-tree check (use carefully)
+```
+
+## Project layout (developer-oriented)
+
+| Path | Purpose |
+|------|---------|
+| `app/` | Flask application (routes, templates, static assets) |
+| `aegis_keepass_lib.py` | Parsing, decryption, matching, KeePass updates |
+| `wsgi.py` | Gunicorn entry point |
+| `requirements.txt` | Python dependencies |
+| `Dockerfile` / `docker-compose.yml` | Container image and local Compose stack |
+| `app/_version.py` | Version source of truth |
+| `scripts/release.sh` | GitHub Release + Docker CI trigger |
+| `release-notes/` | Per-version release notes consumed by `release.sh` |
+| `dev/release-new-version-prompt.md` | Agent prompt for preparing release notes and changelog |
+| `dev/CHANGELOG.md` | Running change log; source for release notes |
+| `.github/workflows/docker-release.yml` | Multi-arch image build/push to GHCR |
+
+## Security notes for developers
+
+- Prefer localhost binding (`127.0.0.1:8080`) when testing with real backups.
+- Do not commit real Aegis backups, `.kdbx` files, passwords, or keyfiles.
+- Memory wiping is best-effort; treat local process memory as sensitive during sessions.

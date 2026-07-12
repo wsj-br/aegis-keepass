@@ -508,6 +508,10 @@ def api_save():
         if changes['fields_added'] or changes['fields_updated'] or changes['notes_updated']:
             updated_count += 1
 
+    matchable_entries = KeePassKdbx.matchable_entries(session.keepass_entries)
+    total_entries = len(matchable_entries)
+    otp_entries = sum(1 for e in matchable_entries if e.has_otp())
+
     kdbx_bytes = updater.save_bytes()
     unmatched_count = sum(
         1 for a in session.match_assignments.values()
@@ -530,6 +534,8 @@ def api_save():
     response.headers['X-Updated-Count'] = str(updated_count)
     response.headers['X-Cleaned-Count'] = str(cleaned_count)
     response.headers['X-Unmatched-Count'] = str(unmatched_count)
+    response.headers['X-Total-Entries'] = str(total_entries)
+    response.headers['X-Otp-Entries'] = str(otp_entries)
     return clear_session_cookie(response)
 
 

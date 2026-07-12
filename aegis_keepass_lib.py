@@ -10,6 +10,7 @@ import io
 import json
 import os
 import re
+import uuid
 from dataclasses import dataclass, field
 from typing import Any, Dict, List, Optional, Tuple, Union
 
@@ -396,33 +397,81 @@ class KeePassKdbx:
         return bytes(password).decode('utf-8')
 
     @staticmethod
-    def _entry_in_recycle_bin(kp: PyKeePass, py_entry: Any) -> bool:
-        recycle = kp.recyclebin_group
-        if recycle is None:
+    def _read_sub_element_text(element: Any, tag: str) -> Optional[str]:
+        child = element.find(tag)
+        if child is not None and child.text:
+            return child.text
+        return None
+
+    @staticmethod
+    def _read_group_uuid(group_element: Any) -> Optional[uuid.UUID]:
+        uuid_elem = group_element.find('UUID')
+        if uuid_elem is None or not uuid_elem.text:
+            return None
+        return uuid.UUID(bytes=base64.b64decode(uuid_elem.text))
+
+    @classmethod
+    def _recycle_bin_uuid(cls, kp: PyKeePass) -> Optional[uuid.UUID]:
+        elem = kp._xpath('/KeePassFile/Meta/RecycleBinUUID', first=True)
+        if elem is None or not elem.text:
+            return None
+        return uuid.UUID(bytes=base64.b64decode(elem.text))
+
+    @staticmethod
+    def _entry_string_fields(element: Any) -> Dict[str, str]:
+        strings: Dict[str, str] = {}
+        for string_elem in element.findall('String'):
+            key_elem = string_elem.find('Key')
+            value_elem = string_elem.find('Value')
+            if key_elem is None or value_elem is None:
+                continue
+            key = key_elem.text
+            if not key:
+                continue
+            strings[key] = value_elem.text or ''
+        return strings
+
+    @classmethod
+    def _ancestor_group_names(cls, entry_element: Any) -> List[str]:
+        names: List[str] = []
+        for group_element in entry_element.iterancestors('Group'):
+            parent = group_element.getparent()
+            if parent is not None and parent.tag == 'Root':
+                continue
+            name = cls._read_sub_element_text(group_element, 'Name')
+            if name:
+                names.append(name)
+        names.reverse()
+        return names
+
+    @classmethod
+    def _entry_in_recycle_bin(
+        cls,
+        recycle_bin_uuid: Optional[uuid.UUID],
+        entry_element: Any,
+    ) -> bool:
+        if recycle_bin_uuid is None:
             return False
-        group = py_entry.group
-        while group is not None:
-            if group.uuid == recycle.uuid:
+        for group_element in entry_element.iterancestors('Group'):
+            group_uuid = cls._read_group_uuid(group_element)
+            if group_uuid == recycle_bin_uuid:
                 return True
-            group = group.parentgroup
         return False
 
-    @staticmethod
-    def _group_path_for_entry(py_entry: Any) -> Optional[str]:
-        path = py_entry.path
-        if not path or len(path) <= 1:
+    @classmethod
+    def _group_path_for_entry(cls, entry_element: Any) -> Optional[str]:
+        names = cls._ancestor_group_names(entry_element)
+        if not names:
             return None
-        parts = [part for part in path[:-1] if part]
-        return ' / '.join(parts) if parts else None
+        return ' / '.join(names)
 
-    @staticmethod
-    def _custom_strings(py_entry: Any) -> Dict[str, str]:
-        strings: Dict[str, str] = {}
-        for key in KeePassKdbx.OTP_FIELD_KEYS:
-            value = py_entry.get_custom_property(key)
-            if value:
-                strings[key] = value
-        return strings
+    @classmethod
+    def _otp_strings(cls, fields: Dict[str, str]) -> Dict[str, str]:
+        return {
+            key: fields[key]
+            for key in cls.OTP_FIELD_KEYS
+            if fields.get(key)
+        }
 
     @classmethod
     def open_bytes(
@@ -463,26 +512,29 @@ class KeePassKdbx:
         """Build KeePassEntry list from an open pykeepass database."""
         entries: List[KeePassEntry] = []
         recycle_bin_count = 0
+        recycle_bin_uuid = cls._recycle_bin_uuid(kp)
 
         for py_entry in kp.entries:
-            title = py_entry.title or ''
+            element = py_entry._element
+            fields = cls._entry_string_fields(element)
+            title = fields.get('Title', '')
             if not title:
                 continue
 
-            in_recycle_bin = cls._entry_in_recycle_bin(kp, py_entry)
+            in_recycle_bin = cls._entry_in_recycle_bin(recycle_bin_uuid, element)
             if in_recycle_bin:
                 recycle_bin_count += 1
 
             entries.append(KeePassEntry(
                 uuid=str(py_entry.uuid),
                 title=title,
-                username=py_entry.username or None,
-                url=py_entry.url or None,
-                notes=py_entry.notes or None,
-                group_path=cls._group_path_for_entry(py_entry),
+                username=fields.get('UserName') or None,
+                url=fields.get('URL') or None,
+                notes=fields.get('Notes') or None,
+                group_path=cls._group_path_for_entry(element),
                 in_recycle_bin=in_recycle_bin,
                 in_history=False,
-                strings=cls._custom_strings(py_entry),
+                strings=cls._otp_strings(fields),
                 py_entry=py_entry,
             ))
 

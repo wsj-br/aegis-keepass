@@ -4,16 +4,17 @@
 
 {% block steps %}
 <nav class="step-indicator" aria-label="Progress">
-    <span class="step done"><span class="step-num">1</span> Upload</span>
+    <span class="step done" id="step-upload"><span class="step-num">1</span> Upload</span>
     <span class="step-sep" aria-hidden="true"></span>
-    <span class="step active"><span class="step-num">2</span> Review</span>
+    <span class="step active" id="step-review"><span class="step-num">2</span> Review</span>
     <span class="step-sep" aria-hidden="true"></span>
-    <span class="step"><span class="step-num">3</span> Download</span>
+    <span class="step" id="step-download"><span class="step-num">3</span> Download</span>
 </nav>
 {% endblock %}
 
 {% block content %}
-<section class="review-toolbar card">
+<div id="review-workspace">
+<section class="review-toolbar card" id="review-toolbar">
     <div class="stats" id="stats">
         <div class="stat-chip"><span class="stat-label">Total</span><strong id="stat-total">-</strong></div>
         <div class="stat-chip stat-success"><span class="stat-label">Matched</span><strong id="stat-matched">-</strong></div>
@@ -31,7 +32,7 @@
     </div>
 </section>
 
-<section class="card table-card">
+<section class="card table-card" id="entries-section">
     <div class="table-wrap">
         <table>
             <thead>
@@ -47,6 +48,24 @@
                 <tr><td colspan="5" class="empty">Loading…</td></tr>
             </tbody>
         </table>
+    </div>
+</section>
+</div>
+
+<section class="card complete-card" id="complete-section" hidden>
+    <div class="complete-header">
+        <p class="complete-eyebrow">Step 3 complete</p>
+        <h2>Download complete</h2>
+        <p><strong>keepass-merged.kdbx</strong> has been saved to your device.</p>
+    </div>
+    <div class="stats complete-stats" aria-label="Saved database summary">
+        <div class="stat-chip"><span class="stat-label">Total entries</span><strong id="complete-total">-</strong></div>
+        <div class="stat-chip stat-success"><span class="stat-label">Entries with OTP</span><strong id="complete-otp">-</strong></div>
+        <div class="stat-chip"><span class="stat-label">Updated</span><strong id="complete-updated">-</strong></div>
+        <div class="stat-chip"><span class="stat-label">Cleaned</span><strong id="complete-cleaned">-</strong></div>
+    </div>
+    <div class="complete-actions">
+        <button class="btn btn-secondary" id="complete-end-session-btn" type="button">End session</button>
     </div>
 </section>
 

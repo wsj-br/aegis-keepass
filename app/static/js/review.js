@@ -437,6 +437,20 @@ async function clearMatch(aegisUuid) {
     }
 }
 
+function showCompleteView(summary) {
+    document.getElementById('step-upload').className = 'step done';
+    document.getElementById('step-review').className = 'step done';
+    document.getElementById('step-download').className = 'step active';
+
+    document.getElementById('review-workspace').hidden = true;
+
+    document.getElementById('complete-total').textContent = summary.total;
+    document.getElementById('complete-otp').textContent = summary.otp;
+    document.getElementById('complete-updated').textContent = summary.updated;
+    document.getElementById('complete-cleaned').textContent = summary.cleaned;
+    document.getElementById('complete-section').hidden = false;
+}
+
 document.getElementById('save-btn').addEventListener('click', async () => {
     if (!confirm('Apply imported OTP secrets and download merged KeePass database?')) return;
 
@@ -463,9 +477,9 @@ document.getElementById('save-btn').addEventListener('click', async () => {
 
         const updated = resp.headers.get('X-Updated-Count') || '0';
         const cleaned = resp.headers.get('X-Cleaned-Count') || '0';
-        showToast('Downloaded keepass-merged.kdbx (' + updated + ' updated, ' + cleaned + ' cleaned). Session ended.', 'success');
-
-        setTimeout(() => { window.location.href = '/'; }, 2000);
+        const total = resp.headers.get('X-Total-Entries') || '0';
+        const otp = resp.headers.get('X-Otp-Entries') || '0';
+        showCompleteView({ total, otp, updated, cleaned });
     } catch (err) {
         showToast('Save failed: ' + err.message, 'error');
     } finally {
@@ -479,6 +493,10 @@ document.getElementById('end-session-btn').addEventListener('click', async () =>
     try {
         await fetch('/api/session/end', { method: 'POST' });
     } catch (e) {}
+    window.location.href = '/';
+});
+
+document.getElementById('complete-end-session-btn').addEventListener('click', () => {
     window.location.href = '/';
 });
 
