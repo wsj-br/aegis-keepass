@@ -1,25 +1,32 @@
-# Virtual Environment
+# Virtual environments
 venv/
 .venv/
 env/
 
-# Python Cache & Runtime Artifacts
+# Python bytecode and caches
 __pycache__/
 *.pyc
 *.pyo
 *.pyd
 .pytest_cache/
+.mypy_cache/
+.ruff_cache/
 
-# Databases and configuration inputs/outputs (sensitive)
-*.xml
+# User uploads and secrets (never commit)
 *.json
-
-# Logs
-*.log
-
-# Temporary files
-*.tmp
-
-# Sensitive local configurations/secrets
+*.kdbx
+*.key
+*.keyx
+*.xml
+*.enc
 *password*
 .env
+.env.*
+
+# Logs and temporary files
+*.log
+*.tmp
+
+# OS and editor
+.DS_Store
+.cursor/

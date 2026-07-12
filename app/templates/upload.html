@@ -1,0 +1,81 @@
+{% extends "base.html" %}
+
+{% block title %}Upload — Aegis-KeePass OTP Sync{% endblock %}
+
+{% block steps %}
+<nav class="step-indicator" aria-label="Progress">
+    <span class="step active"><span class="step-num">1</span> Upload</span>
+    <span class="step-sep" aria-hidden="true"></span>
+    <span class="step"><span class="step-num">2</span> Review</span>
+    <span class="step-sep" aria-hidden="true"></span>
+    <span class="step"><span class="step-num">3</span> Download</span>
+</nav>
+{% endblock %}
+
+{% block content %}
+<section class="card upload-card">
+    <div class="card-header">
+        <h2>Upload your files</h2>
+        <p>Provide your encrypted Aegis backup and KeePass database. Files are processed in memory and never stored on disk.</p>
+    </div>
+
+    <form id="upload-form" class="upload-form" enctype="multipart/form-data" novalidate>
+        <div class="drop-grid">
+            <label class="drop-zone" id="aegis-drop" for="aegis-input">
+                <input type="file" id="aegis-input" name="aegis" accept=".json,application/json" hidden>
+                <div class="drop-icon" aria-hidden="true">📁</div>
+                <div class="drop-title">Aegis backup</div>
+                <div class="drop-hint">Encrypted JSON export</div>
+                <div class="drop-file" id="aegis-name">Drop file or click to browse</div>
+            </label>
+
+            <label class="drop-zone" id="keepass-drop" for="keepass-input">
+                <input type="file" id="keepass-input" name="keepass" accept=".kdbx,application/octet-stream" hidden>
+                <div class="drop-icon" aria-hidden="true">🔒</div>
+                <div class="drop-title">KeePass database</div>
+                <div class="drop-hint">Encrypted .kdbx file</div>
+                <div class="drop-file" id="keepass-name">Drop file or click to browse</div>
+            </label>
+        </div>
+
+        <div class="field">
+            <label for="aegis-password-input">Aegis backup password</label>
+            <input type="password" id="aegis-password-input" name="aegis_password" autocomplete="off" required
+                   placeholder="Password for your Aegis backup">
+        </div>
+
+        <div class="field">
+            <label for="keepass-password-input">KeePass master password</label>
+            <input type="password" id="keepass-password-input" name="keepass_password" autocomplete="off" required
+                   placeholder="Master password for your .kdbx database">
+        </div>
+
+        <div class="field">
+            <label for="keyfile-input">KeePass keyfile <span class="field-optional">(optional)</span></label>
+            <input type="file" id="keyfile-input" name="keyfile" accept="*/*" hidden>
+            <button type="button" class="btn btn-secondary btn-sm" id="keyfile-btn">Choose keyfile…</button>
+            <span class="drop-file" id="keyfile-name">Only if your database requires a keyfile</span>
+        </div>
+
+        <div class="form-actions">
+            <button type="submit" class="btn btn-primary" id="upload-btn">
+                Continue to review
+            </button>
+        </div>
+
+        <p class="security-note">
+            Your files and passwords stay in server memory only. Session data is securely wiped when you download the merged database or end the session.
+        </p>
+    </form>
+
+    <div id="upload-progress" class="upload-progress" hidden aria-live="polite" aria-busy="false">
+        <h3 class="upload-progress-title">Processing your backups</h3>
+        <p class="upload-progress-detail" id="upload-progress-detail">Starting…</p>
+        <ol class="progress-steps" id="upload-progress-steps"></ol>
+    </div>
+</section>
+{% endblock %}
+
+{% block scripts %}
+<script src="{{ url_for('static', filename='js/upload.js') }}"></script>
+{% endblock %}

@@ -1,0 +1,12 @@
+services:
+  web:
+    build: .
+    ports:
+      - "127.0.0.1:8080:8080"
+    environment:
+      - SESSION_TIMEOUT_SECONDS=1800
+      - MAX_IN_MEMORY_UPLOAD_BYTES=33554432
+      - MAX_UPLOAD_BYTES=52428800
+    read_only: true
+    tmpfs:
+      - /tmp:size=64M,mode=1777

@@ -1,0 +1,17 @@
+.venv/
+venv/
+__pycache__/
+*.pyc
+.git/
+.cursor/
+
+# User uploads and secrets
+*.json
+*.kdbx
+*.key
+*.keyx
+*.xml
+*.enc
+*password*
+.env
+.env.*

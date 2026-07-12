@@ -1,0 +1,94 @@
+{% extends "base.html" %}
+
+{% block title %}Review — Aegis-KeePass OTP Sync{% endblock %}
+
+{% block steps %}
+<nav class="step-indicator" aria-label="Progress">
+    <span class="step done"><span class="step-num">1</span> Upload</span>
+    <span class="step-sep" aria-hidden="true"></span>
+    <span class="step active"><span class="step-num">2</span> Review</span>
+    <span class="step-sep" aria-hidden="true"></span>
+    <span class="step"><span class="step-num">3</span> Download</span>
+</nav>
+{% endblock %}
+
+{% block content %}
+<section class="review-toolbar card">
+    <div class="stats" id="stats">
+        <div class="stat-chip"><span class="stat-label">Total</span><strong id="stat-total">-</strong></div>
+        <div class="stat-chip stat-success"><span class="stat-label">Matched</span><strong id="stat-matched">-</strong></div>
+        <div class="stat-chip stat-danger"><span class="stat-label">Unmatched</span><strong id="stat-unmatched">-</strong></div>
+    </div>
+    <div class="toolbar-controls">
+        <div class="filters" role="group" aria-label="Filter entries">
+            <button class="filter-btn active" data-status="all" type="button">All</button>
+            <button class="filter-btn" data-status="matched" type="button">Matched</button>
+            <button class="filter-btn" data-status="unmatched" type="button">Unmatched</button>
+        </div>
+        <input type="search" class="search-input" id="aegis-filter" placeholder="Filter Aegis entries…">
+        <button class="btn btn-primary" id="save-btn" type="button">Download merged database</button>
+        <button class="btn btn-secondary" id="end-session-btn" type="button">End session</button>
+    </div>
+</section>
+
+<section class="card table-card">
+    <div class="table-wrap">
+        <table>
+            <thead>
+                <tr>
+                    <th>Status</th>
+                    <th>Aegis Entry</th>
+                    <th>KeePass Entry</th>
+                    <th>Match Info</th>
+                    <th>Actions</th>
+                </tr>
+            </thead>
+            <tbody id="entries-body">
+                <tr><td colspan="5" class="empty">Loading…</td></tr>
+            </tbody>
+        </table>
+    </div>
+</section>
+
+<div class="modal-overlay" id="picker-modal">
+    <div class="modal" role="dialog" aria-modal="true" aria-labelledby="picker-title">
+        <div class="modal-header">
+            <h2 id="picker-title">Select KeePass Entry</h2>
+            <div class="modal-actions">
+                <button class="btn btn-primary btn-sm" id="suggest-btn" type="button">Suggest</button>
+            </div>
+            <input type="search" class="search-input" id="keepass-search" placeholder="Search KeePass by title, username, URL…" style="width:100%;">
+        </div>
+        <div class="modal-body" id="search-results"></div>
+        <div class="modal-footer picker-footer">
+            <div class="pagination" id="search-pagination"></div>
+            <button class="btn btn-secondary" type="button" onclick="closePicker()">Cancel</button>
+        </div>
+    </div>
+</div>
+
+<div class="modal-overlay" id="conflict-modal">
+    <div class="modal" role="dialog" aria-modal="true">
+        <div class="modal-header"><h2>Reassign KeePass entry?</h2></div>
+        <div class="modal-body" id="conflict-body"></div>
+        <div class="modal-footer">
+            <button class="btn btn-secondary" id="conflict-cancel-btn" type="button">Cancel</button>
+            <button class="btn btn-danger" id="conflict-confirm-btn" type="button">Reassign anyway</button>
+        </div>
+    </div>
+</div>
+
+<div class="modal-overlay" id="info-modal">
+    <div class="modal" role="dialog" aria-modal="true" aria-labelledby="info-modal-title">
+        <div class="modal-header"><h2 id="info-modal-title">Entry Details</h2></div>
+        <div class="modal-body" id="info-body"></div>
+        <div class="modal-footer">
+            <button class="btn btn-secondary" id="info-close-btn" type="button">Close</button>
+        </div>
+    </div>
+</div>
+{% endblock %}
+
+{% block scripts %}
+<script src="{{ url_for('static', filename='js/review.js') }}"></script>
+{% endblock %}

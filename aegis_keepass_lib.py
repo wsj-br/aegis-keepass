@@ -2,21 +2,29 @@
 """
 Shared library for Aegis-KeePass OTP Sync.
 
-Parsers, entry matching, and applying imported OTP data to KeePass XML.
-Used by aegis_keepass_web.py.
+Parsers, entry matching, and applying imported OTP data to KeePass databases.
 """
 
 import base64
-import getpass
+import io
 import json
 import os
 import re
-import sys
 from dataclasses import dataclass, field
-from typing import Any, Dict, List, Optional, Tuple
-from xml.etree import ElementTree as ET
+from typing import Any, Dict, List, Optional, Tuple, Union
 
 from rapidfuzz import fuzz
+
+from app.secure import SecureBytes, WipeRegistry, secure_wipe
+
+try:
+    from pykeepass import PyKeePass
+    from pykeepass.exceptions import CredentialsError
+    PYKEEPASS_AVAILABLE = True
+except ImportError:
+    PyKeePass = None  # type: ignore[misc, assignment]
+    CredentialsError = Exception  # type: ignore[misc, assignment]
+    PYKEEPASS_AVAILABLE = False
 
 # Optional cryptography library for Aegis decryption
 try:
@@ -34,14 +42,27 @@ class AegisDecryptor:
     """Decrypts Aegis Authenticator encrypted backup files."""
 
     @staticmethod
+    def is_encrypted_vault(data: dict) -> bool:
+        """Check if parsed JSON is an encrypted Aegis backup."""
+        return isinstance(data, dict) and 'header' in data and 'db' in data
+
+    @staticmethod
     def is_encrypted(filepath: str) -> bool:
         """Check if a file is an encrypted Aegis backup."""
         try:
             with open(filepath, 'r', encoding='utf-8') as f:
                 data = json.load(f)
-            # Encrypted backups have 'header' and 'db' fields
-            return isinstance(data, dict) and 'header' in data and 'db' in data
+            return AegisDecryptor.is_encrypted_vault(data)
         except (json.JSONDecodeError, FileNotFoundError, UnicodeDecodeError):
+            return False
+
+    @staticmethod
+    def is_encrypted_bytes(data: bytes) -> bool:
+        """Check if raw bytes are an encrypted Aegis backup."""
+        try:
+            vault = json.loads(data.decode('utf-8'))
+            return AegisDecryptor.is_encrypted_vault(vault)
+        except (json.JSONDecodeError, UnicodeDecodeError):
             return False
 
     @staticmethod
@@ -60,10 +81,16 @@ class AegisDecryptor:
         return bytes.fromhex(hex_str)
 
     @staticmethod
-    def _derive_key(password: str, salt: bytes, n: int, r: int, p: int, length: int = 32) -> bytes:
+    def _derive_key(password: Union[str, bytes, bytearray, SecureBytes], salt: bytes, n: int, r: int, p: int, length: int = 32) -> bytes:
         """Derive key using scrypt KDF."""
         if Scrypt is None:
             raise RuntimeError("cryptography library required for decryption. Run: pip install cryptography")
+        if isinstance(password, SecureBytes):
+            password_bytes = bytes(password)
+        elif isinstance(password, str):
+            password_bytes = password.encode('utf-8')
+        else:
+            password_bytes = bytes(password)
         kdf = Scrypt(
             salt=salt,
             length=length,
@@ -72,7 +99,7 @@ class AegisDecryptor:
             p=p,
             backend=default_backend()
         )
-        return kdf.derive(password.encode('utf-8'))
+        return kdf.derive(password_bytes)
 
     @staticmethod
     def _aes_gcm_decrypt(ciphertext: bytes, key: bytes, iv: bytes, auth_tag: bytes) -> bytes:
@@ -85,40 +112,21 @@ class AegisDecryptor:
         return aesgcm.decrypt(iv, ciphertext_with_tag, None)
 
     @staticmethod
-    def decrypt_file(filepath: str, password: str) -> dict:
-        """
-        Decrypt an Aegis backup file and return the decrypted JSON data.
-
-        Args:
-            filepath: Path to the encrypted Aegis backup file
-            password: The password used to encrypt the backup
-
-        Returns:
-            dict: The decrypted vault data containing 'entries' list
-
-        Raises:
-            ValueError: If the file format is invalid
-            RuntimeError: If decryption fails (wrong password, corrupted file)
-        """
+    def _decrypt_vault(data: dict, password: Union[str, bytes, bytearray, SecureBytes]) -> dict:
+        """Decrypt parsed vault JSON with the given password."""
         if not CRYPTO_AVAILABLE:
             raise RuntimeError(
                 "cryptography library required for Aegis decryption. "
                 "Install with: pip install cryptography"
             )
 
-        # Load the vault file
-        with open(filepath, 'r', encoding='utf-8') as f:
-            data = json.load(f)
-
         if not isinstance(data, dict):
             raise ValueError("Invalid vault file: top-level is not an object")
 
-        # Extract password slots
         slots = AegisDecryptor._dict_drill(data, 'header', 'slots')
         if not isinstance(slots, list):
             raise ValueError("Invalid vault file: no valid password slots found")
 
-        # Find valid password slots
         password_slots = []
         for slot in slots:
             if not isinstance(slot, dict):
@@ -144,13 +152,11 @@ class AegisDecryptor:
         if not password_slots:
             raise ValueError("Invalid vault file: no valid password slots found")
 
-        # Extract cipher text
         db = data.get('db')
         if not isinstance(db, str):
             raise ValueError("Invalid vault file: no db found")
         cipher_text = base64.b64decode(db)
 
-        # Extract IV and auth tag
         iv_hex = AegisDecryptor._dict_drill(data, 'header', 'params', 'nonce')
         if not isinstance(iv_hex, str):
             raise ValueError("Invalid vault file: no initialization vector found")
@@ -161,14 +167,8 @@ class AegisDecryptor:
             raise ValueError("Invalid vault file: no authentication tag found")
         auth_tag = AegisDecryptor._hex_to_bytes(auth_tag_hex)
 
-        # Check version
-        version = AegisDecryptor._dict_drill(data, 'version')
-        if version != 1:
-            print("WARNING: Unsupported vault format version. Decryption may fail.", file=sys.stderr)
-
-        # Try to decrypt the master key with each password slot
         master_key = None
-        last_error = None
+        meta_key_buf = bytearray(32)
 
         for slot in password_slots:
             try:
@@ -177,30 +177,51 @@ class AegisDecryptor:
                 r = slot['r']
                 p = slot['p']
 
-                # Derive meta key
-                meta_key = AegisDecryptor._derive_key(password, salt, n, r, p, 32)
+                derived = AegisDecryptor._derive_key(password, salt, n, r, p, 32)
+                meta_key_buf[:] = derived
 
-                # Decrypt slot key
                 slot_key = AegisDecryptor._hex_to_bytes(slot['key'])
                 slot_nonce = AegisDecryptor._hex_to_bytes(slot['key_params']['nonce'])
                 slot_tag = AegisDecryptor._hex_to_bytes(slot['key_params']['tag'])
 
-                master_key = AegisDecryptor._aes_gcm_decrypt(slot_key, meta_key, slot_nonce, slot_tag)
-                break  # Success!
+                master_key = AegisDecryptor._aes_gcm_decrypt(
+                    slot_key, bytes(meta_key_buf), slot_nonce, slot_tag
+                )
+                break
 
-            except Exception as e:
-                last_error = e
-                continue  # Try next slot
+            except Exception:
+                continue
+
+        secure_wipe(meta_key_buf)
 
         if master_key is None:
             raise RuntimeError("Failed to decrypt master key. Wrong password?")
 
-        # Decrypt the actual vault data
+        master_key_buf = bytearray(master_key)
         try:
-            plaintext = AegisDecryptor._aes_gcm_decrypt(cipher_text, master_key, iv, auth_tag)
+            plaintext = AegisDecryptor._aes_gcm_decrypt(
+                cipher_text, bytes(master_key_buf), iv, auth_tag
+            )
             return json.loads(plaintext.decode('utf-8'))
         except Exception as e:
-            raise RuntimeError(f"Failed to decrypt vault. Vault may be corrupted: {e}")
+            raise RuntimeError(f"Failed to decrypt vault. Vault may be corrupted: {e}") from e
+        finally:
+            secure_wipe(master_key_buf)
+
+    @staticmethod
+    def decrypt_data(data: bytes, password: Union[bytes, bytearray, SecureBytes]) -> dict:
+        """Decrypt encrypted Aegis backup bytes."""
+        vault = json.loads(data.decode('utf-8'))
+        if not AegisDecryptor.is_encrypted_vault(vault):
+            raise ValueError("Not an encrypted Aegis backup")
+        return AegisDecryptor._decrypt_vault(vault, password)
+
+    @staticmethod
+    def decrypt_file(filepath: str, password: str) -> dict:
+        """Decrypt an Aegis backup file and return the decrypted JSON data."""
+        with open(filepath, 'r', encoding='utf-8') as f:
+            data = json.load(f)
+        return AegisDecryptor._decrypt_vault(data, password)
 
 
 @dataclass
@@ -209,11 +230,18 @@ class AegisEntry:
     uuid: str
     name: str
     issuer: str
-    secret: str
+    secret: SecureBytes
     algo: str
     digits: int
     period: int
     entry_type: str = "totp"
+
+    def secret_text(self) -> str:
+        """Decode TOTP secret for KeePass output (transient str)."""
+        return self.secret.decode('utf-8')
+
+    def wipe_secret(self) -> None:
+        self.secret.wipe()
 
     @property
     def full_identifier(self) -> str:
@@ -230,7 +258,7 @@ class AegisEntry:
 
 @dataclass
 class KeePassEntry:
-    """Represents an entry from KeePass XML."""
+    """Represents an entry from a KeePass database."""
     uuid: str
     title: str
     username: Optional[str] = None
@@ -240,7 +268,7 @@ class KeePassEntry:
     in_recycle_bin: bool = False
     in_history: bool = False
     strings: Dict[str, str] = field(default_factory=dict)
-    xml_element: Optional[ET.Element] = None
+    py_entry: Optional[Any] = field(default=None, repr=False)
 
     @property
     def is_matchable(self) -> bool:
@@ -286,205 +314,184 @@ class AegisParser:
     }
 
     @staticmethod
-    def parse(filepath: str, password: Optional[str] = None) -> List[AegisEntry]:
-        """
-        Parse Aegis JSON file and return list of entries.
-
-        Args:
-            filepath: Path to the Aegis file (can be encrypted or decrypted)
-            password: Password for encrypted backups. If not provided and file
-                     is encrypted, will prompt interactively.
-
-        Returns:
-            List of AegisEntry objects
-        """
-        # Check if file is encrypted
-        is_encrypted = AegisDecryptor.is_encrypted(filepath)
-
-        if not is_encrypted:
-            print("ERROR: Only encrypted Aegis backup files are supported.")
-            sys.exit(1)
-
-        print(f"  Detected encrypted Aegis backup: {filepath}")
-
-        if not CRYPTO_AVAILABLE:
-            print("ERROR: The 'cryptography' library is required to decrypt Aegis backups.")
-            print("Please install it with: pip install cryptography")
-            sys.exit(1)
-
-        # Get password if not provided
-        if password is None:
-            password = getpass.getpass("Enter Aegis backup password: ")
-
-        # Decrypt the file
-        try:
-            data = AegisDecryptor.decrypt_file(filepath, password)
-            print("  Successfully decrypted Aegis backup")
-        except RuntimeError as e:
-            print(f"ERROR: Failed to decrypt Aegis backup: {e}")
-            sys.exit(1)
-        except ValueError as e:
-            print(f"ERROR: Invalid vault file: {e}")
-            sys.exit(1)
-
+    def _entries_from_vault(data: dict, registry: Optional[WipeRegistry] = None) -> List[AegisEntry]:
         entries = []
         for entry_data in data.get('entries', []):
             info = entry_data.get('info', {})
-            # Convert Aegis algo format to KeePass HMAC format
             aegis_algo = info.get('algo', 'SHA1')
             keepass_algo = AegisParser.ALGO_MAP.get(aegis_algo, 'HMAC-SHA-1')
 
-            entry = AegisEntry(
+            entries.append(AegisEntry(
                 uuid=entry_data.get('uuid', ''),
                 name=entry_data.get('name', ''),
                 issuer=entry_data.get('issuer', ''),
-                secret=info.get('secret', ''),
+                secret=SecureBytes(info.get('secret', ''), registry=registry),
                 algo=keepass_algo,
                 digits=info.get('digits', 6),
                 period=info.get('period', 30),
-                entry_type=entry_data.get('type', 'totp')
-            )
-            entries.append(entry)
-
+                entry_type=entry_data.get('type', 'totp'),
+            ))
         return entries
 
-
-class KeePassParser:
-    """Parser for KeePass XML files."""
-    
-    # XML namespace handling
-    NAMESPACE = {'k': 'http:// KeePass.info/KeePass_XML/'}
-    
     @staticmethod
-    def _build_parent_map(root: ET.Element) -> Dict[ET.Element, ET.Element]:
-        parent_map: Dict[ET.Element, ET.Element] = {}
-        for parent in root.iter():
-            for child in parent:
-                parent_map[child] = parent
-        return parent_map
-
-    @staticmethod
-    def _group_path_for_entry(entry_elem: ET.Element, parent_map: Dict[ET.Element, ET.Element]) -> Optional[str]:
-        names: List[str] = []
-        current = parent_map.get(entry_elem)
-        while current is not None:
-            if current.tag == 'Group':
-                name_elem = current.find('Name')
-                if name_elem is not None and name_elem.text:
-                    names.insert(0, name_elem.text)
-            current = parent_map.get(current)
-        return ' / '.join(names) if names else None
+    def parse_bytes(
+        data: bytes,
+        password: Union[bytes, bytearray, SecureBytes],
+        *,
+        registry: Optional[WipeRegistry] = None,
+    ) -> List[AegisEntry]:
+        """Parse encrypted Aegis backup bytes."""
+        if not CRYPTO_AVAILABLE:
+            raise RuntimeError(
+                "The 'cryptography' library is required to decrypt Aegis backups."
+            )
+        if not AegisDecryptor.is_encrypted_bytes(data):
+            raise ValueError("Only encrypted Aegis backup files are supported.")
+        vault_data = AegisDecryptor.decrypt_data(data, password)
+        return AegisParser._entries_from_vault(vault_data, registry=registry)
 
     @staticmethod
-    def _find_recycle_bin_group(root: ET.Element) -> Optional[ET.Element]:
-        """Locate the recycle bin group using Meta/RecycleBinUUID."""
-        meta = root.find('Meta')
-        if meta is None:
-            return None
-        rb_uuid_elem = meta.find('RecycleBinUUID')
-        if rb_uuid_elem is None or not rb_uuid_elem.text:
-            return None
-        rb_uuid = rb_uuid_elem.text.strip()
-        for group in root.iter('Group'):
-            uuid_elem = group.find('UUID')
-            if uuid_elem is not None and uuid_elem.text == rb_uuid:
-                return group
-        return None
+    def parse(filepath: str, password: str) -> List[AegisEntry]:
+        """Parse encrypted Aegis JSON file from disk."""
+        if not AegisDecryptor.is_encrypted(filepath):
+            raise ValueError("Only encrypted Aegis backup files are supported.")
+        if not CRYPTO_AVAILABLE:
+            raise RuntimeError(
+                "The 'cryptography' library is required to decrypt Aegis backups."
+            )
+        vault_data = AegisDecryptor.decrypt_file(filepath, password)
+        return AegisParser._entries_from_vault(vault_data)
+
+
+class KeePassKdbx:
+    """Open and parse KeePass .kdbx databases via pykeepass."""
+
+    KDBX_SIG1 = b'\x03\xd9\xa2\x9a'
+    KDBX_SIG2 = b'\x67\xfb\x4b\xb5'
+
+    OTP_FIELD_KEYS = (
+        'TimeOtp-Secret-Base32',
+        'TimeOtp-Period',
+        'TimeOtp-Digits',
+        'TimeOtp-Algorithm',
+    )
+
+    @classmethod
+    def is_kdbx_bytes(cls, data: bytes) -> bool:
+        """Return True if bytes look like a KeePass KDBX file."""
+        return (
+            len(data) >= 8
+            and data[:4] == cls.KDBX_SIG1
+            and data[4:8] == cls.KDBX_SIG2
+        )
 
     @staticmethod
-    def _entry_in_recycle_bin(
-        entry_elem: ET.Element,
-        parent_map: Dict[ET.Element, ET.Element],
-        recycle_bin_group: Optional[ET.Element],
-    ) -> bool:
-        """True if entry is inside the recycle bin group or any of its subgroups."""
-        if recycle_bin_group is None:
+    def _password_text(
+        password: Union[str, bytes, bytearray, SecureBytes],
+    ) -> str:
+        if isinstance(password, SecureBytes):
+            return password.decode('utf-8')
+        if isinstance(password, str):
+            return password
+        return bytes(password).decode('utf-8')
+
+    @staticmethod
+    def _entry_in_recycle_bin(kp: PyKeePass, py_entry: Any) -> bool:
+        recycle = kp.recyclebin_group
+        if recycle is None:
             return False
-        current = parent_map.get(entry_elem)
-        while current is not None:
-            if current is recycle_bin_group:
+        group = py_entry.group
+        while group is not None:
+            if group.uuid == recycle.uuid:
                 return True
-            current = parent_map.get(current)
+            group = group.parentgroup
         return False
 
     @staticmethod
-    def _entry_in_history(
-        entry_elem: ET.Element,
-        parent_map: Dict[ET.Element, ET.Element],
-    ) -> bool:
-        """True if this Entry element is a History snapshot (not the live entry)."""
-        parent = parent_map.get(entry_elem)
-        return parent is not None and parent.tag == 'History'
+    def _group_path_for_entry(py_entry: Any) -> Optional[str]:
+        path = py_entry.path
+        if not path or len(path) <= 1:
+            return None
+        parts = [part for part in path[:-1] if part]
+        return ' / '.join(parts) if parts else None
+
+    @staticmethod
+    def _custom_strings(py_entry: Any) -> Dict[str, str]:
+        strings: Dict[str, str] = {}
+        for key in KeePassKdbx.OTP_FIELD_KEYS:
+            value = py_entry.get_custom_property(key)
+            if value:
+                strings[key] = value
+        return strings
+
+    @classmethod
+    def open_bytes(
+        cls,
+        data: bytes,
+        password: Union[str, bytes, bytearray, SecureBytes],
+        keyfile_bytes: Optional[bytes] = None,
+    ) -> PyKeePass:
+        """Decrypt and load a KDBX database from bytes."""
+        if not PYKEEPASS_AVAILABLE:
+            raise RuntimeError(
+                "The 'pykeepass' library is required to read KeePass databases. "
+                "Install with: pip install pykeepass"
+            )
+        if not cls.is_kdbx_bytes(data):
+            raise ValueError("Only KeePass .kdbx database files are supported.")
+
+        kdbx_stream = io.BytesIO(data)
+        kdbx_stream.seek(0)
+        keyfile = None
+        if keyfile_bytes:
+            keyfile = io.BytesIO(keyfile_bytes)
+            keyfile.seek(0)
+
+        try:
+            return PyKeePass(
+                kdbx_stream,
+                password=cls._password_text(password),
+                keyfile=keyfile,
+            )
+        except CredentialsError as exc:
+            raise ValueError(
+                "Invalid KeePass master password or keyfile."
+            ) from exc
+
+    @classmethod
+    def entries_from_db(cls, kp: PyKeePass) -> Tuple[List[KeePassEntry], int]:
+        """Build KeePassEntry list from an open pykeepass database."""
+        entries: List[KeePassEntry] = []
+        recycle_bin_count = 0
+
+        for py_entry in kp.entries:
+            title = py_entry.title or ''
+            if not title:
+                continue
+
+            in_recycle_bin = cls._entry_in_recycle_bin(kp, py_entry)
+            if in_recycle_bin:
+                recycle_bin_count += 1
+
+            entries.append(KeePassEntry(
+                uuid=str(py_entry.uuid),
+                title=title,
+                username=py_entry.username or None,
+                url=py_entry.url or None,
+                notes=py_entry.notes or None,
+                group_path=cls._group_path_for_entry(py_entry),
+                in_recycle_bin=in_recycle_bin,
+                in_history=False,
+                strings=cls._custom_strings(py_entry),
+                py_entry=py_entry,
+            ))
+
+        return entries, recycle_bin_count
 
     @staticmethod
     def matchable_entries(entries: List[KeePassEntry]) -> List[KeePassEntry]:
         """Return live, non-recycle-bin entries eligible for Aegis matching."""
         return [e for e in entries if e.is_matchable]
-
-    @staticmethod
-    def parse(filepath: str) -> Tuple[List[KeePassEntry], ET.ElementTree, int]:
-        """Parse KeePass XML file and return entries, tree, and recycle-bin entry count."""
-        tree = ET.parse(filepath)
-        root = tree.getroot()
-        parent_map = KeePassParser._build_parent_map(root)
-        recycle_bin_group = KeePassParser._find_recycle_bin_group(root)
-
-        entries = []
-        recycle_bin_count = 0
-        
-        for entry_elem in root.iter('Entry'):
-            strings = {}
-            title = None
-            username = None
-            url = None
-            notes = None
-            
-            # Parse all String elements
-            for string_elem in entry_elem.findall('String'):
-                key_elem = string_elem.find('Key')
-                value_elem = string_elem.find('Value')
-                
-                if key_elem is not None and value_elem is not None:
-                    key = key_elem.text or ''
-                    value = value_elem.text or ''
-                    strings[key] = value
-                    
-                    # Extract common fields
-                    if key == 'Title':
-                        title = value
-                    elif key == 'UserName':
-                        username = value
-                    elif key == 'URL':
-                        url = value
-                    elif key == 'Notes':
-                        notes = value
-            
-            # Get UUID
-            uuid_elem = entry_elem.find('UUID')
-            uuid = uuid_elem.text if uuid_elem is not None else ''
-            
-            if title:  # Only add entries with a title
-                in_history = KeePassParser._entry_in_history(entry_elem, parent_map)
-                in_recycle_bin = KeePassParser._entry_in_recycle_bin(
-                    entry_elem, parent_map, recycle_bin_group
-                )
-                if in_recycle_bin:
-                    recycle_bin_count += 1
-                entry = KeePassEntry(
-                    uuid=uuid,
-                    title=title,
-                    username=username,
-                    url=url,
-                    notes=notes,
-                    group_path=KeePassParser._group_path_for_entry(entry_elem, parent_map),
-                    in_recycle_bin=in_recycle_bin,
-                    in_history=in_history,
-                    strings=strings,
-                    xml_element=entry_elem
-                )
-                entries.append(entry)
-        
-        return entries, tree, recycle_bin_count
 
 
 class EntryMatcher:
@@ -727,7 +734,7 @@ class EntryMatcher:
                      keepass_entries: List[KeePassEntry]) -> Tuple[List[MatchResult], List[AegisEntry]]:
         """
         Match Aegis entries to KeePass entries.
-        Expects current entries only (KeePassParser.matchable_entries).
+        Expects current entries only (KeePassKdbx.matchable_entries).
         Returns: (matches, unmatched_aegis_entries)
         """
         matches = []
@@ -803,121 +810,81 @@ class EntryMatcher:
 
 
 class KeePassUpdater:
-    """Updates KeePass XML with OTP data from Aegis entries."""
+    """Updates a KeePass database with OTP data from Aegis entries."""
 
     AEGIS_UUID_MARKER_PATTERN = re.compile(
         r'AegisUUID:\s*[a-f0-9-]+\s*',
         re.IGNORECASE,
     )
-    
+
     OTP_FIELDS = {
         'TimeOtp-Secret-Base32': 'secret',
         'TimeOtp-Period': 'period',
         'TimeOtp-Digits': 'digits',
-        'TimeOtp-Algorithm': 'algo'
+        'TimeOtp-Algorithm': 'algo',
     }
-    
-    def __init__(self, tree: ET.ElementTree):
-        self.tree = tree
+
+    def __init__(self, kp: PyKeePass):
+        self.kp = kp
 
     @classmethod
     def _strip_all_aegis_markers(cls, notes: str) -> str:
         """Remove every AegisUUID marker line from notes text."""
         cleaned = cls.AEGIS_UUID_MARKER_PATTERN.sub('', notes or '')
         return re.sub(r'\n{3,}', '\n\n', cleaned).strip()
-    
+
     def update_entry(self, match: MatchResult, dry_run: bool = True) -> Dict:
         """Update a KeePass entry with OTP data from Aegis."""
         kp_entry = match.keepass_entry
         aegis_entry = match.aegis_entry
-        xml_elem = kp_entry.xml_element
-        
+        py_entry = kp_entry.py_entry
+
         changes = {
             'title': kp_entry.title,
             'aegis_uuid': aegis_entry.uuid,
             'fields_added': [],
             'fields_updated': [],
-            'notes_updated': False
+            'notes_updated': False,
         }
-        
-        if dry_run:
+
+        if dry_run or py_entry is None:
             return changes
-        
-        # Find or create String elements for OTP fields
-        string_elems = {s.find('Key').text: s for s in xml_elem.findall('String') 
-                       if s.find('Key') is not None}
-        
-        # Update OTP fields
+
         for kp_key, aegis_attr in self.OTP_FIELDS.items():
-            value = getattr(aegis_entry, aegis_attr)
-            
-            if kp_key in string_elems:
-                # Update existing field
-                value_elem = string_elems[kp_key].find('Value')
-                if value_elem is not None:
-                    old_value = value_elem.text or ''
-                    if str(value).upper() != old_value.upper():
-                        value_elem.text = str(value)
-                        changes['fields_updated'].append(kp_key)
+            if aegis_attr == 'secret':
+                value = aegis_entry.secret_text()
             else:
-                # Create new String element
-                new_string = ET.Element('String')
-                key_elem = ET.SubElement(new_string, 'Key')
-                key_elem.text = kp_key
-                value_elem = ET.SubElement(new_string, 'Value')
-                
-                # Add ProtectInMemory attribute for secrets
-                if 'Secret' in kp_key:
-                    value_elem.set('ProtectInMemory', 'True')
-                
-                value_elem.text = str(value)
-                
-                # Insert before History element (if exists) to maintain proper XML structure
-                history_elem = xml_elem.find('History')
-                if history_elem is not None:
-                    idx = list(xml_elem).index(history_elem)
-                    xml_elem.insert(idx, new_string)
-                else:
-                    xml_elem.append(new_string)
-                
+                value = str(getattr(aegis_entry, aegis_attr))
+
+            existing = py_entry.get_custom_property(kp_key)
+            protect = 'Secret' in kp_key
+            if existing is not None and existing != '':
+                if str(value).upper() != (existing or '').upper():
+                    py_entry.set_custom_property(kp_key, str(value), protect=protect)
+                    changes['fields_updated'].append(kp_key)
+                    kp_entry.strings[kp_key] = str(value)
+            else:
+                py_entry.set_custom_property(kp_key, str(value), protect=protect)
                 changes['fields_added'].append(kp_key)
-        
-        # Update Notes with Aegis UUID marker
-        notes_elem = None
-        for string_elem in xml_elem.findall('String'):
-            key_elem = string_elem.find('Key')
-            if key_elem is not None and key_elem.text == 'Notes':
-                notes_elem = string_elem.find('Value')
-                break
-        
+                kp_entry.strings[kp_key] = str(value)
+
         marker = f"AegisUUID: {aegis_entry.uuid}"
-        
-        if notes_elem is not None:
-            current_notes = notes_elem.text or ''
-            cleaned_notes = self._strip_all_aegis_markers(current_notes)
-            if cleaned_notes:
-                new_notes = f"{cleaned_notes}\n\n{marker}"
-            else:
-                new_notes = marker
-            if new_notes != current_notes:
-                notes_elem.text = new_notes
-                kp_entry.notes = new_notes
-                changes['notes_updated'] = True
+        current_notes = py_entry.notes or ''
+        cleaned_notes = self._strip_all_aegis_markers(current_notes)
+        if cleaned_notes:
+            new_notes = f"{cleaned_notes}\n\n{marker}"
         else:
-            # Create Notes field
-            new_string = ET.SubElement(xml_elem, 'String')
-            key_elem = ET.SubElement(new_string, 'Key')
-            key_elem.text = 'Notes'
-            value_elem = ET.SubElement(new_string, 'Value')
-            value_elem.text = marker
-            kp_entry.notes = marker
+            new_notes = marker
+        if new_notes != current_notes:
+            py_entry.notes = new_notes
+            kp_entry.notes = new_notes
             changes['notes_updated'] = True
-        
+
         return changes
 
     def remove_aegis_link(self, kp_entry: KeePassEntry, aegis_uuid: str) -> Dict:
         """Remove AegisUUID marker and TimeOtp-* fields from a KeePass entry."""
-        xml_elem = kp_entry.xml_element
+        py_entry = kp_entry.py_entry
         changes = {
             'title': kp_entry.title,
             'aegis_uuid': aegis_uuid,
@@ -925,48 +892,44 @@ class KeePassUpdater:
             'fields_removed': [],
         }
 
-        if xml_elem is None:
+        if py_entry is None:
             return changes
 
-        otp_keys = set(self.OTP_FIELDS.keys())
-        for string_elem in list(xml_elem.findall('String')):
-            key_elem = string_elem.find('Key')
-            if key_elem is not None and key_elem.text in otp_keys:
-                xml_elem.remove(string_elem)
-                changes['fields_removed'].append(key_elem.text)
-                kp_entry.strings.pop(key_elem.text, None)
+        props = py_entry.custom_properties
+        for kp_key in self.OTP_FIELDS:
+            if kp_key in props:
+                py_entry.delete_custom_property(kp_key)
+                changes['fields_removed'].append(kp_key)
+                kp_entry.strings.pop(kp_key, None)
 
-        notes_elem = None
-        for string_elem in xml_elem.findall('String'):
-            key_elem = string_elem.find('Key')
-            if key_elem is not None and key_elem.text == 'Notes':
-                notes_elem = string_elem.find('Value')
-                break
-
-        if notes_elem is not None:
-            current_notes = notes_elem.text or ''
-            pattern = re.compile(
-                rf'AegisUUID:\s*{re.escape(aegis_uuid)}\s*',
-                re.IGNORECASE,
-            )
-            new_notes = pattern.sub('', current_notes)
-            new_notes = re.sub(r'\n{3,}', '\n\n', new_notes).strip()
-            if new_notes != current_notes:
-                notes_elem.text = new_notes if new_notes else ''
-                kp_entry.notes = new_notes if new_notes else None
-                changes['marker_removed'] = True
+        current_notes = py_entry.notes or ''
+        pattern = re.compile(
+            rf'AegisUUID:\s*{re.escape(aegis_uuid)}\s*',
+            re.IGNORECASE,
+        )
+        new_notes = pattern.sub('', current_notes)
+        new_notes = re.sub(r'\n{3,}', '\n\n', new_notes).strip()
+        if new_notes != current_notes:
+            py_entry.notes = new_notes if new_notes else ''
+            kp_entry.notes = new_notes if new_notes else None
+            changes['marker_removed'] = True
 
         return changes
 
     def apply_match(self, match: MatchResult) -> Dict:
         """Apply OTP data and AegisUUID marker for a match."""
         return self.update_entry(match, dry_run=False)
-    
-    def save(self, filepath: str):
-        """Save the modified XML to file."""
-        # Register namespace to avoid ns0: prefix
-        ET.register_namespace('', 'http:// KeePass.info/KeePass_XML/')
-        self.tree.write(filepath, encoding='utf-8', xml_declaration=True)
+
+    def save_bytes(self) -> bytes:
+        """Serialize modified database to encrypted KDBX bytes."""
+        buffer = io.BytesIO()
+        self.kp.save(buffer)
+        buffer.seek(0)
+        return buffer.getvalue()
+
+    def save(self, filepath: str) -> None:
+        """Save the modified database to a file."""
+        self.kp.save(filepath)
         try:
             os.chmod(filepath, 0o600)
         except OSError:

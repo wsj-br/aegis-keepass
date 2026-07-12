@@ -1,138 +1,89 @@
 # Aegis-KeePass OTP Sync
 
-Import TOTP (Time-based One-Time Password) secrets from [Aegis Authenticator](https://getaegis.app/) backup files into [KeePass](https://keepass.info/) password manager entries. Review matches in the browser, then save a merged KeePass XML file.
+Import TOTP secrets from [Aegis Authenticator](https://getaegis.app/) encrypted backups into [KeePass](https://keepass.info/) entries. Upload your files in the browser, review matches, and download a merged `.kdbx` database—no plaintext XML export required.
 
 ## Overview
 
-This tool bridges the gap between Aegis (mobile OTP app) and KeePass (password manager) by:
-- **Importing** OTP secrets from encrypted Aegis backups (decrypted securely in memory)
-- **Matching** Aegis entries to KeePass XML entries using fuzzy string matching
-- **Applying** OTP configuration fields (`TimeOtp-Secret-Base32`, etc.) to matched entries
-- **Merging** the result into a new KeePass XML file, leaving your original export untouched
-- Storing Aegis UUID markers in KeePass Notes for future re-imports
+This tool connects Aegis (mobile authenticator) and KeePass (password manager) by:
 
-The web interface lets you review automatic matches, fix ambiguous ones manually, and save the merged KeePass XML when you are ready.
+- **Importing** OTP secrets from encrypted Aegis backups (decrypted only in server memory)
+- **Opening** your KeePass `.kdbx` database directly
+- **Matching** Aegis entries to KeePass entries using fuzzy string matching
+- **Applying** native KeePass TOTP fields (`TimeOtp-Secret-Base32`, and related settings)
+- **Exporting** a merged, encrypted `.kdbx` file for download
+- **Recording** Aegis UUID markers in KeePass Notes to support future re-imports
 
-## Files
+Designed for single-user, localhost use. All processing happens in your browser session; nothing is persisted on the server after download or session end.
 
-- `aegis_keepass_web.py` — Interactive web interface (main entry point)
-- `aegis_keepass_lib.py` — Shared parsing, matching, and KeePass update logic
-- `aegis-backup-*.json` — Input: encrypted Aegis backup file
-- `keepass.xml` — Input/Output: KeePass database in XML format
+## Quick start
 
-## Prerequisites
-
-- Python 3.9+ (with `python3-venv` package: `sudo apt install python3-venv`)
-- KeePass database exported to XML format
-- Encrypted Aegis backup file
-- `cryptography` library (required): `pip install cryptography`
-
-## Installation
-
-Create and activate a virtual environment (recommended for isolated dependencies):
+**Requirements:** Docker and Docker Compose.
 
 ```bash
-# Create virtual environment
-python3 -m venv venv
-
-# Activate it
-source venv/bin/activate
-
-# Install all requirements (includes cryptography for encrypted backups)
-pip install -r requirements.txt
+docker compose up --build
 ```
 
-**Note:** On systems with externally managed Python (PEP 668), use a virtual environment or install via apt: `sudo apt install python3-venv python3-cryptography`
+Open [http://localhost:8080](http://localhost:8080). Stop the container with `Ctrl+C` or `docker compose down`.
 
-## Step 1: Prepare Aegis Backup
+### Workflow
 
-Copy your Aegis encrypted backup file to the working directory. The tool decrypts it securely in memory — no temporary decrypted files are created.
+1. **Upload** — Select your encrypted Aegis backup (`.json`) and KeePass database (`.kdbx`). Enter the Aegis backup password, KeePass master password, and keyfile if your database uses one.
+2. **Review** — Confirm automatic matches, manually link unmatched entries, and resolve conflicts before applying changes.
+3. **Download** — Click **Download merged database** to receive `keepass-merged.kdbx` in your browser.
 
-Optionally create a password file for automation:
+After download or **End session**, all session data is securely wiped from server memory.
 
-```bash
-echo "your-password" > aegis-password.txt
-chmod 600 aegis-password.txt
-```
+**Important:** Back up your original KeePass database before replacing it with the downloaded file.
 
-## Step 2: Export KeePass to XML
+## Requirements
 
-In KeePass:
-1. File → Export
-2. Select "KeePass XML (2.x)" format
-3. Save as `keepass.xml`
+| Input | Format | Notes |
+|-------|--------|-------|
+| Aegis backup | Encrypted `.json` | Export from Aegis with encryption enabled; plain JSON backups are not supported |
+| KeePass database | `.kdbx` | From KeePass 2.x, KeePassXC, or compatible clients |
+| KeePass keyfile | Optional | Required only if your database uses a keyfile in addition to the master password |
 
-## Step 3: Run the Web Interface
+## Project structure
 
-```bash
-# Fully interactive — prompts for any missing arguments
-python3 aegis_keepass_web.py
+| Path | Purpose |
+|------|---------|
+| `app/` | Flask web application (upload, review, session APIs) |
+| `aegis_keepass_lib.py` | Parsing, decryption, matching, and KeePass database updates |
+| `wsgi.py` | Gunicorn application entry point |
+| `Dockerfile` | Container image (Python 3.12, non-root user) |
+| `docker-compose.yml` | Local deployment on `127.0.0.1:8080` |
 
-# Partial — only prompts for what you omit
-python3 aegis_keepass_web.py --aegis aegis-backup-YYYYMMDD-HHMMSS.json
+## Configuration
 
-# Explicit paths (password prompted interactively if omitted)
-python3 aegis_keepass_web.py \
-  --aegis aegis-backup-YYYYMMDD-HHMMSS.json \
-  --keepass keepass.xml \
-  --port 5000
+Environment variables can be set in `docker-compose.yml` or passed to Gunicorn when running locally.
 
-# Non-interactive password via file
-python3 aegis_keepass_web.py \
-  --aegis aegis-backup-YYYYMMDD-HHMMSS.json \
-  --keepass keepass.xml \
-  --password-file aegis-password.txt
-```
+| Variable | Default | Description |
+|----------|---------|-------------|
+| `SESSION_TIMEOUT_SECONDS` | `1800` | Idle session timeout in seconds (30 minutes) |
+| `MAX_IN_MEMORY_UPLOAD_BYTES` | `33554432` | Combined upload size kept entirely in RAM (32 MB) |
+| `MAX_UPLOAD_BYTES` | `52428800` | Maximum allowed upload size (50 MB) |
+| `FLASK_SECRET_KEY` | *(random per start)* | Secret used to sign session cookies. Set explicitly if you need stable sessions across restarts (e.g. during development) |
 
-When run without all arguments, the CLI guides you through setup:
+The Docker Compose file also configures:
 
-- **Aegis backup** (`--aegis`): lists `.json` files in the current folder; use ↑/↓ to select, Enter to confirm
-- **KeePass XML** (`--keepass`): lists `.xml` files the same way
-- **Aegis password** (if `--password-file` is not set): choose **Enter password** or **Read password from file**; if you pick a file, `.txt` files in the current folder are listed for selection
+- **Read-only root filesystem** — the container cannot write outside `/tmp`
+- **Tmpfs for `/tmp`** — temporary spill storage for large uploads (64 MB), cleared when the container stops
 
-Each file picker also includes `[Enter path manually]` as the last option if the file is elsewhere. Use **Esc** to cancel. In non-interactive terminals (pipes, CI), plain text prompts are used instead.
+## How matching works
 
-Then open http://localhost:5000 in your browser to:
-- **Match** — review automatic matches and manually link unmatched entries
-- **Apply** — confirm which OTP secrets to copy into each KeePass entry
-- **Merge** — click **Save Merged File** to apply OTP secrets and write the merged KeePass XML
-- **Close** — click **Close** in the header when you are done (or close the browser tab)
+Matching uses [RapidFuzz](https://github.com/rapidfuzz/RapidFuzz) against KeePass entry titles:
 
-The merged output file uses `-merged` in the name (e.g. `keepass-merged.xml`); your original export is never overwritten.
+1. Build an Aegis identifier from `issuer` and `name`
+2. Score against each KeePass entry title
+3. Boost scores using issuer/name substrings, extracted domains, usernames, and numeric tokens
+4. Prefer existing `AegisUUID` markers in KeePass Notes when re-importing
+5. Flag conflicts when one KeePass entry matches multiple Aegis entries
 
-### Console output
+Entries that do not match automatically can be linked manually in the review step.
 
-The terminal stays quiet while you use the web UI — routine API requests are not logged. You still see startup messages and match counts. When you save a merged file, the console prints the file name and full path:
+## Re-import tracking
 
-```
-Merged file saved:
-  Name: keepass-merged.xml
-  Path: /home/you/project/keepass-merged.xml
-```
-
-### Stopping the server
-
-The local web server stops automatically when you:
-- Click **Close** in the app header (after confirming)
-- Close the browser tab (refreshing the page does **not** stop the server)
-
-You can also press **Ctrl+C** in the terminal at any time.
-
-## How Matching Works
-
-The tool uses fuzzy string matching with the following strategy:
-
-1. **Combine Aegis fields**: `issuer + " " + name` (e.g., "GitHub: user-account")
-2. **Compare against KeePass Title**: Using difflib.SequenceMatcher
-3. **Multiple matching algorithms**:
-   - Full identifier vs Title
-   - Issuer only vs Title
-   - Name only vs Title
-   - Substring matching (issuer/name contained in title)
-
-## Linking Strategy
-
-Aegis UUIDs are stored in KeePass Notes:
+Each matched KeePass entry receives an `AegisUUID` marker in its Notes field:
 
 ```
 Existing notes...
@@ -140,66 +91,68 @@ Existing notes...
 AegisUUID: 00000000-0000-4000-8000-000000000001
 ```
 
-This enables:
-- Future re-imports to find entries by UUID
-- Verification that an entry was imported from Aegis
-- No custom fields needed
+This enables reliable re-imports: the tool recognises previously linked entries by UUID rather than relying on title matching alone.
 
-## OTP Fields Added to KeePass
+## OTP fields written to KeePass
 
-For each matched entry, these fields are added/updated:
+| Field | Description |
+|-------|-------------|
+| `TimeOtp-Secret-Base32` | TOTP shared secret (Base32) |
+| `TimeOtp-Period` | Time step in seconds |
+| `TimeOtp-Digits` | Number of OTP digits |
+| `TimeOtp-Algorithm` | Hash algorithm (e.g. `HMAC-SHA-1`) |
 
-| Field | Description | Example |
-|-------|-------------|---------|
-| `TimeOtp-Secret-Base32` | TOTP secret (Base32 encoded) | `ORSXG5BRGIZTINJW` |
-| `TimeOtp-Period` | Time period in seconds | `30` |
-| `TimeOtp-Digits` | Number of OTP digits | `6` |
-| `TimeOtp-Algorithm` | Hash algorithm | `SHA1` |
+These are KeePass 2.x native TOTP fields, compatible with KeePassXC and Keepass2Android.
 
-These fields are compatible with KeePass plugins like:
-- KeePassOTP
-- KeeTrayTOTP
+## Security model
 
-## Safety Features
+- **Encrypted at rest on your machine** — You upload already-encrypted Aegis JSON and `.kdbx` files; decryption happens only in server memory during the session
+- **In-memory processing** — Typical backups are held in wipeable buffers and never written to disk
+- **Secure wipe on session end** — Sensitive buffers are overwritten with random data, then zeroed, when you download or end the session
+- **No server-side retention** — The merged database is streamed to your browser; the server does not keep a copy
+- **Localhost only** — Docker Compose binds port `8080` to `127.0.0.1`, not all interfaces
+- **Hardened container** — Non-root user, read-only filesystem, tmpfs for temporary files
+- **Session cookies** — HttpOnly and SameSite=Strict; there is no login layer (intended for trusted localhost use)
+- **Health check** — `GET /health` returns `200 OK` for container orchestration
 
-1. **Non-destructive merge**: output is saved as a new file (e.g. `keepass-merged.xml`) instead of overwriting your original database
-2. **Visual review**: review and adjust every match before applying OTP secrets
-3. **Conflict detection**: warns when a KeePass entry is already linked to another Aegis entry
-4. **UUID tracking**: stores Aegis UUID in the Notes field for precise future re-imports
-5. **Secure deletion**: after usage, use `clean_data.sh` to securely delete sensitive files in the working directory
+### Limitations
+
+Memory wiping is best-effort. Python `str` and immutable `bytes` objects cannot be guaranteed erased; the app uses wipeable `SecureBytes` buffers where possible. CPython may copy data internally during cryptography or HTTP handling. This tool is suitable for personal localhost use, not for environments that require hardware security modules or formal secret-management guarantees.
+
+Uploads exceeding the in-memory threshold (>32 MB combined) are encrypted and written to `/tmp` inside the container. Those files are shredded when the session ends.
+
+## Development
+
+**Requirements:** Python 3.12+ (matches the Docker image).
+
+```bash
+python3 -m venv venv
+source venv/bin/activate
+pip install -r requirements.txt
+gunicorn --bind 127.0.0.1:8080 --workers 1 --timeout 120 wsgi:app
+```
+
+Open [http://localhost:8080](http://localhost:8080). Use a single worker so in-memory session state stays consistent.
 
 ## Troubleshooting
 
-### Unmatched or Incorrect Matches
+| Issue | What to try |
+|-------|-------------|
+| Upload rejected | Confirm the Aegis file is an **encrypted** backup and the KeePass file is a valid `.kdbx`. Check file sizes against `MAX_UPLOAD_BYTES`. |
+| Wrong password | Aegis and KeePass passwords are validated at upload; re-upload with the correct credentials. |
+| Unmatched entries | Use manual linking in the review step. Matching depends on title similarity—rename entries in KeePass or Aegis if titles differ significantly. |
+| Session expired | Idle sessions time out after 30 minutes by default. Start again from the upload page. |
+| Port already in use | Stop any process on port 8080, or change the host port mapping in `docker-compose.yml`. |
 
-If some entries do not match automatically due to naming differences, use the web UI to match them manually — click **Select** or **Suggest** on the unmatched row.
-
-### XML Parsing Errors
-
-Ensure KeePass XML export format is "KeePass XML (2.x)"
-
-## Security Notes
-
-- Ensure the Aegis backup file and the original KeePass XML files have restrictive permissions (`chmod 600`)
-- **Backups are decrypted in memory** — no temporary decrypted files are ever created
-- If you use `--password-file`, ensure that file also has restrictive permissions (`chmod 600`)
-- The tool writes the output to a new merged file (e.g. `keepass-merged.xml`) with restrictive permissions, keeping your original database file completely safe
-- Review matches in the browser before clicking **Save Merged File** to apply and merge; use **Close** or close the tab when finished so the local server does not keep running
-
-## Workflow Summary
+## Workflow
 
 ```
-┌─────────────────┐     decrypt      ┌──────────────────────┐     merge     ┌────────────────────────┐
-│  Aegis Backup   │─────────────────>|  aegis_keepass_web   │──────────────>|  Merged KeePass XML    │
-│  (encrypted)    │   import OTP     │  match · apply       │               │       (with OTP)       │
-└─────────────────┘                  └──────────┬───────────┘               └────────────────────────┘
-                                                ^
-┌─────────────────┐                             │
-│  KeePass XML    │─────────────────────────────┘
-│  (original)     │
-└─────────────────┘
+┌─────────────────┐     upload      ┌──────────────────────┐   download   ┌────────────────────────┐
+│  Aegis Backup   │────────────────>│  Web App (Docker)    │─────────────>│  keepass-merged.kdbx   │
+│  (encrypted)    │   + .kdbx       │  match · apply       │  (browser)   │  (replace in KeePass)  │
+└─────────────────┘                 └──────────────────────┘              └────────────────────────┘
 ```
 
 ## License
 
-Licenced under GPLv3. Copyright (c) 2026 Waldemar Scudeller Jr.
+Licensed under the [GNU General Public License v3.0](https://www.gnu.org/licenses/gpl-3.0.html). Copyright (c) 2026 Waldemar Scudeller Jr.

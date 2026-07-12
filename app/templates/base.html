@@ -1,0 +1,31 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>{% block title %}Aegis-KeePass OTP Sync{% endblock %}</title>
+    <link rel="stylesheet" href="{{ url_for('static', filename='css/app.css') }}">
+    {% block head %}{% endblock %}
+</head>
+<body>
+    <header class="site-header">
+        <div class="container header-inner">
+            <div class="brand">
+                <div class="brand-mark" aria-hidden="true">AK</div>
+                <div>
+                    <h1>Aegis-KeePass OTP Sync</h1>
+                    <p class="subtitle">Import OTP secrets · Match entries · Merge into KeePass</p>
+                </div>
+            </div>
+            {% block steps %}{% endblock %}
+        </div>
+    </header>
+
+    <main class="container">
+        {% block content %}{% endblock %}
+    </main>
+
+    <div class="toast" id="toast" role="status" aria-live="polite"></div>
+    {% block scripts %}{% endblock %}
+</body>
+</html>
