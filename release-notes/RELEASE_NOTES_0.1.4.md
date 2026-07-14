@@ -24,4 +24,4 @@ GPL-3.0 license text and automated third-party notices generation.
 | Linux (Bash)                          | `aegis-keepass-start.sh`       |
 
 
-See [README.md](../README.md) for more details.
+See [README.md](https://github.com/wsj-br/aegis-keepass/blob/main/README.md) for more details.
