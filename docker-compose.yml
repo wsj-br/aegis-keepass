@@ -1,5 +1,6 @@
 services:
   web:
+    image: aegis-keepass:local
     container_name: aegis-keepass
     build: .
     ports:
