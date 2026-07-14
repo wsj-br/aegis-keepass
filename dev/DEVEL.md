@@ -7,8 +7,8 @@ This document covers setting up a development environment, cloning the repositor
 | Tool                            | Purpose                                 | Notes                                   |
 |---------------------------------|-----------------------------------------|-----------------------------------------|
 | **Git**                         | Clone and version control               |                                         |
-| **Python 3.12+**                | Local runs (matches the Docker image)   | `python3 --version`                     |
-| **Docker** + **Docker Compose** | Container builds and local Compose runs | Required for release image verification |
+| **Python 3.12+**                | Local runs                              | `python3 --version`                     |
+| **Docker** + **Docker Compose** | Container builds and local Compose runs | Image base: `python:3.13-alpine`        |
 | **GitHub CLI (`gh`)**           | Create GitHub Releases                  | Required only for publishing            |
 
 Optional but recommended:
@@ -120,6 +120,14 @@ docker build -t aegis-keepass:dev .
 docker run --rm -p 127.0.0.1:8580:8580 aegis-keepass:dev
 ```
 
+The published image uses **`python:3.13-alpine`** (musl). Local development can stay on Python 3.12+; the image Python may be newer.
+
+### Docker Scout / image policy notes
+
+Release builds attach **SLSA provenance** (`mode=max`) and an **SPDX SBOM** via [`.github/workflows/docker-release.yml`](../.github/workflows/docker-release.yml) so Docker Scout’s supply-chain attestation policy can pass.
+
+Alpine lowers the OS CVE and package surface versus Debian slim. Scout’s **copyleft** policy is still expected to flag the image: Alpine ships GPL components (e.g. BusyBox), and the app depends on **`pykeepass` (GPL-3.0)**. That is accepted; do not chase a copyleft-policy PASS by rewriting the KeePass stack.
+
 ## Test
 
 There is currently **no automated unit/integration test suite** in the repository. Before committing or releasing, run the checks below.
@@ -173,7 +181,7 @@ Version is defined in a single place: [`app/_version.py`](../app/_version.py).
 | Docker image tag              | `X.Y.Z`  | `0.1.0`  |
 | `app/_version.py` / UI footer | `X.Y.Z`  | `0.1.0`  |
 
-Publishing a GitHub Release triggers [`.github/workflows/docker-release.yml`](../.github/workflows/docker-release.yml), which builds multi-arch images (`linux/amd64`, `linux/arm64`) and pushes them to `ghcr.io/wsj-br/aegis-keepass`.
+Publishing a GitHub Release triggers [`.github/workflows/docker-release.yml`](../.github/workflows/docker-release.yml), which builds multi-arch images (`linux/amd64`, `linux/arm64`) from `python:3.13-alpine`, attaches SLSA provenance and an SPDX SBOM, and pushes them to `ghcr.io/wsj-br/aegis-keepass`.
 
 ### Preparing release notes
 

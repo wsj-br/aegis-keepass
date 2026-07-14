@@ -68,6 +68,7 @@ jobs:
     permissions:
       contents: read
       packages: write
+      id-token: write
     strategy:
       fail-fast: false
       matrix:
@@ -103,6 +104,8 @@ jobs:
       - name: Set up Docker Buildx
         uses: docker/setup-buildx-action@v4
 
+      # push-by-digest defaults provenance off; enable max provenance + SBOM explicitly so
+      # each leaf digest is an index that includes attestation manifests for imagetools merge.
       - name: Build and push by digest
         id: build
         uses: docker/build-push-action@v7
@@ -112,6 +115,8 @@ jobs:
           build-args: |
             VERSION=${{ needs.prepare.outputs.version }}
           labels: ${{ steps.meta.outputs.labels }}
+          provenance: mode=max
+          sbom: true
           outputs: type=image,name=${{ env.REGISTRY_IMAGE }},push-by-digest=true,name-canonical=true,push=true
 
       - name: Export digest
@@ -134,6 +139,7 @@ jobs:
     permissions:
       contents: read
       packages: write
+      id-token: write
     steps:
       - name: Download digests
         uses: actions/download-artifact@v8
@@ -166,4 +172,11 @@ jobs:
 
       - name: Inspect image
         run: |
-          docker buildx imagetools inspect ${{ env.REGISTRY_IMAGE }}:${{ needs.prepare.outputs.version }}
+          IMAGE="${{ env.REGISTRY_IMAGE }}:${{ needs.prepare.outputs.version }}"
+          docker buildx imagetools inspect "$IMAGE"
+          echo "::group::Provenance"
+          docker buildx imagetools inspect "$IMAGE" --format '{{ json .Provenance }}'
+          echo "::endgroup::"
+          echo "::group::SBOM"
+          docker buildx imagetools inspect "$IMAGE" --format '{{ json .SBOM }}'
+          echo "::endgroup::"

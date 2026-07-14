@@ -7,6 +7,16 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [0.1.3] - 2026-07-14
+
+### Changed
+- Default listen/host port changed from `8080` to `8580` (Dockerfile, Compose, start scripts, and docs).
+- Docker image base switched from `python:3.12-slim` (Debian) to `python:3.13-alpine` for a smaller OS surface and fewer reported CVEs.
+- Release workflow now emits SLSA provenance (`mode=max`) and an SPDX SBOM on multi-arch GHCR images.
+
+### Added
+- `dev/DEVEL.md` notes for Alpine / Python 3.13 image base, Docker Scout attestation expectations, and why the copyleft policy may still flag the image (`pykeepass` GPL-3.0 and Alpine GPL components).
+
 ## [0.1.2] - 2026-07-14
 
 ### Added

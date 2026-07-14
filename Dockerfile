@@ -1,4 +1,4 @@
-FROM python:3.12-slim
+FROM python:3.13-alpine
 
 ARG VERSION=dev
 LABEL org.opencontainers.image.source="https://github.com/wsj-br/aegis-keepass"
@@ -6,8 +6,8 @@ LABEL org.opencontainers.image.version="${VERSION}"
 
 WORKDIR /app
 
-RUN groupadd --gid 1000 app && \
-    useradd --uid 1000 --gid app --create-home app && \
+RUN addgroup -g 1000 app && \
+    adduser -D -u 1000 -G app app && \
     mkdir -p /tmp && chown app:app /tmp
 
 COPY requirements.txt .

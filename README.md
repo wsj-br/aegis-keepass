@@ -32,13 +32,17 @@ Or download and run:
 ```bash
 curl -fsSL -o aegis-keepass-start.sh \
   https://github.com/wsj-br/aegis-keepass/releases/latest/download/aegis-keepass-start.sh
-chmod +x aegis-keepass-start.sh && ./aegis-keepass-start.sh
+
+chmod +x aegis-keepass-start.sh 
+
+./aegis-keepass-start.sh
 ```
 
 ### Windows (PowerShell) — Docker Desktop
 
 ```powershell
-irm https://github.com/wsj-br/aegis-keepass/releases/latest/download/aegis-keepass-start.ps1 | iex
+irm https://github.com/wsj-br/aegis-keepass/releases/latest/download/aegis-keepass-start.ps1 `
+| iex
 ```
 
 Or download and run:
@@ -46,6 +50,7 @@ Or download and run:
 ```powershell
 irm https://github.com/wsj-br/aegis-keepass/releases/latest/download/aegis-keepass-start.ps1 `
   -OutFile aegis-keepass-start.ps1
+
 .\aegis-keepass-start.ps1
 ```
 
@@ -62,7 +67,8 @@ wslc --version
 Then:
 
 ```powershell
-irm https://github.com/wsj-br/aegis-keepass/releases/latest/download/aegis-keepass-start-wslc.ps1 | iex
+irm https://github.com/wsj-br/aegis-keepass/releases/latest/download/aegis-keepass-start-wslc.ps1 `
+  | iex
 ```
 
 Or download and run:
@@ -70,6 +76,7 @@ Or download and run:
 ```powershell
 irm https://github.com/wsj-br/aegis-keepass/releases/latest/download/aegis-keepass-start-wslc.ps1 `
   -OutFile aegis-keepass-start-wslc.ps1
+
 .\aegis-keepass-start-wslc.ps1
 ```
 

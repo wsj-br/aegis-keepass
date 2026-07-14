@@ -57,7 +57,7 @@ Open [http://localhost:8580](http://localhost:8580).
 
 - [README](../README.md) — overview, quick start, security model
 - [Developer guide](DEVEL.md) — local setup, smoke tests, full release checklist
-- [AGENT.md](../AGENT.md) — agent and changelog conventions
+- [AGENTS.md](../AGENTS.md) — agent and changelog conventions
 
 **Summary:**  
 Ensure the new release notes file follows the format of `release-notes/RELEASE_NOTES_0.1.0.md`, highlights user-facing changes from the changelog, updates `dev/CHANGELOG.md` for the versioned section, and leaves the changelog ready for the next iteration. Write clearly and concisely for GitHub users pulling the published Docker image.
