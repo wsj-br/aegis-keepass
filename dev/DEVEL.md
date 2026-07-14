@@ -64,6 +64,14 @@ pip install -r requirements.txt
 
 Dependencies are listed in `requirements.txt` (Flask, cryptography, RapidFuzz, Gunicorn, pykeepass).
 
+After changing Python dependencies, refresh third-party license text at the repo root:
+
+```bash
+./scripts/update-notices.sh
+```
+
+That writes `NOTICES` from a temporary venv with `requirements.txt` via [`pip-licenses`](https://pypi.org/project/pip-licenses/) (PyPI packages only; not Alpine OS packages).
+
 Deactivate the venv when finished:
 
 ```bash

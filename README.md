@@ -195,4 +195,5 @@ Uploads exceeding the in-memory threshold (>32 MB combined) are encrypted and wr
 
 ## License
 
-Licensed under the [GNU General Public License v3.0](https://www.gnu.org/licenses/gpl-3.0.html). Copyright (c) 2026 Waldemar Scudeller Jr.
+Licensed under the [GNU General Public License v3.0](https://www.gnu.org/licenses/gpl-3.0.html). 
+Copyright (c) 2026 Waldemar Scudeller Jr.

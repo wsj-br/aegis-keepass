@@ -7,6 +7,12 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [0.1.4] - 2026-07-14
+
+### Added
+- `scripts/update-notices.sh` regenerates the repo-root `NOTICES` file from `requirements.txt` via `pip-licenses`.
+- Added a `LICENSE` file to the repo root for the GPL-3.0 license text.
+
 ## [0.1.3] - 2026-07-14
 
 ### Changed
