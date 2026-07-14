@@ -4,12 +4,12 @@ This document covers setting up a development environment, cloning the repositor
 
 ## Prerequisites
 
-| Tool | Purpose | Notes |
-|------|---------|-------|
-| **Git** | Clone and version control | |
-| **Python 3.12+** | Local runs (matches the Docker image) | `python3 --version` |
+| Tool                            | Purpose                                 | Notes                                   |
+|---------------------------------|-----------------------------------------|-----------------------------------------|
+| **Git**                         | Clone and version control               |                                         |
+| **Python 3.12+**                | Local runs (matches the Docker image)   | `python3 --version`                     |
 | **Docker** + **Docker Compose** | Container builds and local Compose runs | Required for release image verification |
-| **GitHub CLI (`gh`)** | Create GitHub Releases | Required only for publishing |
+| **GitHub CLI (`gh`)**           | Create GitHub Releases                  | Required only for publishing            |
 
 Optional but recommended:
 
@@ -78,27 +78,27 @@ This project is a Python Flask app. There is no separate compile step for applic
 
 ```bash
 source .venv/bin/activate
-gunicorn --bind 127.0.0.1:8080 --workers 1 --timeout 120 wsgi:app
+gunicorn --bind 127.0.0.1:8580 --workers 1 --timeout 120 wsgi:app
 ```
 
-Open [http://localhost:8080](http://localhost:8080).
+Open [http://localhost:8580](http://localhost:8580).
 
 Use a **single worker** so in-memory session state stays consistent across requests.
 
 Useful environment variables (optional):
 
-| Variable | Default | Description |
-|----------|---------|-------------|
-| `SESSION_TIMEOUT_SECONDS` | `1800` | Idle session timeout |
-| `MAX_IN_MEMORY_UPLOAD_BYTES` | `33554432` | In-RAM upload threshold (32 MB) |
-| `MAX_UPLOAD_BYTES` | `52428800` | Maximum upload size (50 MB) |
-| `FLASK_SECRET_KEY` | *(random per start)* | Set explicitly for stable cookies across restarts |
+| Variable                     | Default              | Description                                       |
+|------------------------------|----------------------|---------------------------------------------------|
+| `SESSION_TIMEOUT_SECONDS`    | `1800`               | Idle session timeout                              |
+| `MAX_IN_MEMORY_UPLOAD_BYTES` | `33554432`           | In-RAM upload threshold (32 MB)                   |
+| `MAX_UPLOAD_BYTES`           | `52428800`           | Maximum upload size (50 MB)                       |
+| `FLASK_SECRET_KEY`           | *(random per start)* | Set explicitly for stable cookies across restarts |
 
 Example:
 
 ```bash
 export FLASK_SECRET_KEY=dev-secret
-gunicorn --bind 127.0.0.1:8080 --workers 1 --timeout 120 wsgi:app
+gunicorn --bind 127.0.0.1:8580 --workers 1 --timeout 120 wsgi:app
 ```
 
 ### Docker Compose (recommended smoke environment)
@@ -107,7 +107,7 @@ gunicorn --bind 127.0.0.1:8080 --workers 1 --timeout 120 wsgi:app
 docker compose up --build
 ```
 
-Open [http://localhost:8080](http://localhost:8080). Stop with `Ctrl+C` or:
+Open [http://localhost:8580](http://localhost:8580). Stop with `Ctrl+C` or:
 
 ```bash
 docker compose down
@@ -117,7 +117,7 @@ docker compose down
 
 ```bash
 docker build -t aegis-keepass:dev .
-docker run --rm -p 127.0.0.1:8080:8080 aegis-keepass:dev
+docker run --rm -p 127.0.0.1:8580:8580 aegis-keepass:dev
 ```
 
 ## Test
@@ -138,7 +138,7 @@ python -c "from app import create_app; create_app(); print('OK')"
 With the app running (venv or Docker):
 
 ```bash
-curl -sf http://127.0.0.1:8080/health && echo
+curl -sf http://127.0.0.1:8580/health && echo
 ```
 
 Expect HTTP 200.
@@ -146,7 +146,7 @@ Expect HTTP 200.
 ### 3. Manual smoke test (UI)
 
 1. Start the app (`gunicorn` or `docker compose up --build`).
-2. Open [http://localhost:8080](http://localhost:8080).
+2. Open [http://localhost:8580](http://localhost:8580).
 3. Upload an **encrypted** Aegis `.json` backup and a KeePass `.kdbx` (use copies of real files; keep originals safe).
 4. Enter passwords (and keyfile if required).
 5. Confirm matches on the review page; try a manual link if needed.
@@ -167,11 +167,11 @@ Confirm the service is healthy (the image defines a `HEALTHCHECK` against `/heal
 
 Version is defined in a single place: [`app/_version.py`](../app/_version.py).
 
-| Layer | Format | Example |
-|-------|--------|---------|
-| Git tag / GitHub Release | `vX.Y.Z` | `v0.1.0` |
-| Docker image tag | `X.Y.Z` | `0.1.0` |
-| `app/_version.py` / UI footer | `X.Y.Z` | `0.1.0` |
+| Layer                         | Format   | Example  |
+|-------------------------------|----------|----------|
+| Git tag / GitHub Release      | `vX.Y.Z` | `v0.1.0` |
+| Docker image tag              | `X.Y.Z`  | `0.1.0`  |
+| `app/_version.py` / UI footer | `X.Y.Z`  | `0.1.0`  |
 
 Publishing a GitHub Release triggers [`.github/workflows/docker-release.yml`](../.github/workflows/docker-release.yml), which builds multi-arch images (`linux/amd64`, `linux/arm64`) and pushes them to `ghcr.io/wsj-br/aegis-keepass`.
 
@@ -228,7 +228,12 @@ Confirm the prerequisites listed in the prompt (version bump, notes file, clean 
    - Reads version from `app/_version.py`
    - Creates annotated tag `vX.Y.Z` at `HEAD` (recreates tag/release if they already exist)
    - Creates a GitHub Release with the notes file
+   - Attaches start scripts as release assets:
+     `aegis-keepass-start.sh`, `aegis-keepass-start.ps1`, `aegis-keepass-start-wslc.ps1`
    - CI then builds and publishes Docker images
+
+   After publish, assets are available at:
+   `https://github.com/wsj-br/aegis-keepass/releases/latest/download/<script-name>`
 
 6. **Watch CI**:
 
@@ -239,7 +244,7 @@ Confirm the prerequisites listed in the prompt (version bump, notes file, clean 
 
 ```bash
 docker pull ghcr.io/wsj-br/aegis-keepass:X.Y.Z
-docker run --rm -p 127.0.0.1:8080:8080 ghcr.io/wsj-br/aegis-keepass:X.Y.Z
+docker run --rm -p 127.0.0.1:8580:8580 ghcr.io/wsj-br/aegis-keepass:X.Y.Z
 ```
 
 Or use `latest` when the release was tagged as the newest:
@@ -258,22 +263,48 @@ docker pull ghcr.io/wsj-br/aegis-keepass:latest
 
 ## Project layout (developer-oriented)
 
-| Path | Purpose |
-|------|---------|
-| `app/` | Flask application (routes, templates, static assets) |
-| `aegis_keepass_lib.py` | Parsing, decryption, matching, KeePass updates |
-| `wsgi.py` | Gunicorn entry point |
-| `requirements.txt` | Python dependencies |
-| `Dockerfile` / `docker-compose.yml` | Container image and local Compose stack |
-| `app/_version.py` | Version source of truth |
-| `scripts/release.sh` | GitHub Release + Docker CI trigger |
-| `release-notes/` | Per-version release notes consumed by `release.sh` |
-| `dev/release-new-version-prompt.md` | Agent prompt for preparing release notes and changelog |
-| `dev/CHANGELOG.md` | Running change log; source for release notes |
-| `.github/workflows/docker-release.yml` | Multi-arch image build/push to GHCR |
+| Path                                            | Purpose                                                           |
+|-------------------------------------------------|-------------------------------------------------------------------|
+| `app/`                                          | Flask application (routes, templates, static assets)              |
+| `aegis_keepass_lib.py`                          | Parsing, decryption, matching, KeePass updates                    |
+| `wsgi.py`                                       | Gunicorn entry point                                              |
+| `requirements.txt`                              | Python dependencies                                               |
+| `Dockerfile` / `docker-compose.yml`             | Container image and local Compose stack                           |
+| `app/_version.py`                               | Version source of truth                                           |
+| `aegis-keepass-start.sh` / `.ps1` / `-wslc.ps1` | One-command container start; attached to GitHub Releases          |
+| `scripts/release.sh`                            | GitHub Release + Docker CI trigger (includes start-script assets) |
+| `release-notes/`                                | Per-version release notes consumed by `release.sh`                |
+| `dev/release-new-version-prompt.md`             | Agent prompt for preparing release notes and changelog            |
+| `dev/CHANGELOG.md`                              | Running change log; source for release notes                      |
+| `.github/workflows/docker-release.yml`          | Multi-arch image build/push to GHCR                               |
 
 ## Security notes for developers
 
-- Prefer localhost binding (`127.0.0.1:8080`) when testing with real backups.
+- Prefer localhost binding (`127.0.0.1:8580`) when testing with real backups.
 - Do not commit real Aegis backups, `.kdbx` files, passwords, or keyfiles.
 - Memory wiping is best-effort; treat local process memory as sensitive during sessions.
+
+
+
+## Workflow
+
+```
+                    upload
+┌─────────────────┐         ┌─────────────────┐
+│  Aegis Backup   │         │  KeePass .kdbx  │
+│  (encrypted)    │         │                 │
+└────────┬────────┘         └────────┬────────┘
+         │                           │
+         └─────────────┬─────────────┘
+                       ▼
+           ┌──────────────────────┐
+           │  Web App (Docker)    │
+           │  match · apply       │
+           └──────────┬───────────┘
+                      │ download (browser)
+                      ▼
+           ┌────────────────────────┐
+           │  keepass-merged.kdbx   │
+           │  (replace in KeePass)  │
+           └────────────────────────┘
+```

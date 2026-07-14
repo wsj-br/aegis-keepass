@@ -17,13 +17,77 @@ Designed for single-user, localhost use. All processing happens in your browser 
 
 ## Quick start
 
-**Requirements:** Docker and Docker Compose.
+**Requirements:** [Docker](https://docs.docker.com/get-docker/) (Engine on Linux, or Docker Desktop on Windows/macOS), or on Windows the [WSL Containers](https://learn.microsoft.com/en-us/windows/wsl/wsl-container) preview (`wslc`).
+
+Start scripts are published as **GitHub Release assets** (and also live at the repo root on `main`). Prefer the release download URLs below for a versioned copy.
+
+### Linux / macOS
 
 ```bash
-docker compose up --build
+curl -fsSL https://github.com/wsj-br/aegis-keepass/releases/latest/download/aegis-keepass-start.sh | bash
 ```
 
-Open [http://localhost:8080](http://localhost:8080). Stop the container with `Ctrl+C` or `docker compose down`.
+Or download and run:
+
+```bash
+curl -fsSL -o aegis-keepass-start.sh \
+  https://github.com/wsj-br/aegis-keepass/releases/latest/download/aegis-keepass-start.sh
+chmod +x aegis-keepass-start.sh && ./aegis-keepass-start.sh
+```
+
+### Windows (PowerShell) — Docker Desktop
+
+```powershell
+irm https://github.com/wsj-br/aegis-keepass/releases/latest/download/aegis-keepass-start.ps1 | iex
+```
+
+Or download and run:
+
+```powershell
+irm https://github.com/wsj-br/aegis-keepass/releases/latest/download/aegis-keepass-start.ps1 `
+  -OutFile aegis-keepass-start.ps1
+.\aegis-keepass-start.ps1
+```
+
+### Windows (PowerShell) — WSL Containers (`wslc`)
+
+Uses Microsoft's built-in [WSL Containers](https://learn.microsoft.com/en-us/windows/wsl/wsl-container) CLI (no Docker Desktop). Prerequisite once:
+
+```powershell
+wsl --update --pre-release
+wsl --shutdown
+wslc --version
+```
+
+Then:
+
+```powershell
+irm https://github.com/wsj-br/aegis-keepass/releases/latest/download/aegis-keepass-start-wslc.ps1 | iex
+```
+
+Or download and run:
+
+```powershell
+irm https://github.com/wsj-br/aegis-keepass/releases/latest/download/aegis-keepass-start-wslc.ps1 `
+  -OutFile aegis-keepass-start-wslc.ps1
+.\aegis-keepass-start-wslc.ps1
+```
+
+All scripts pull `ghcr.io/wsj-br/aegis-keepass:latest` and start it on [http://127.0.0.1:8580](http://127.0.0.1:8580) (localhost-only). Docker/Compose paths also use a read-only root and tmpfs for `/tmp`; the `wslc` script mounts the same tmpfs. Press `Ctrl+C` to stop, or use `--stop` / `-Stop` for a detached container.
+
+Useful options: `--detach` / `-Detach`, `--port 9090` / `-Port 9090`, `--tag 0.1.1` / `-Tag 0.1.1`, `--open` / `-Open`. Run with `--help` / `-Help` for the full list.
+
+
+
+### Run it manually
+
+Prefer the [Quick start](#quick-start) scripts. 
+
+```bash
+docker run --rm -p 127.0.0.1:8580:8580 --read-only --tmpfs /tmp:size=64M,mode=1777 \
+  ghcr.io/wsj-br/aegis-keepass:latest
+```
+
 
 ### Workflow
 
@@ -37,34 +101,22 @@ After download or **End session**, all session data is securely wiped from serve
 
 ## Requirements
 
-| Input | Format | Notes |
-|-------|--------|-------|
-| Aegis backup | Encrypted `.json` | Export from Aegis with encryption enabled; plain JSON backups are not supported |
-| KeePass database | `.kdbx` | From KeePass 2.x, KeePassXC, or compatible clients |
-| KeePass keyfile | Optional | Required only if your database uses a keyfile in addition to the master password |
-
-## Project structure
-
-| Path | Purpose |
-|------|---------|
-| `app/` | Flask web application (upload, review, session APIs) |
-| `aegis_keepass_lib.py` | Parsing, decryption, matching, and KeePass database updates |
-| `wsgi.py` | Gunicorn application entry point |
-| `Dockerfile` | Container image (Python 3.12, non-root user) |
-| `docker-compose.yml` | Local deployment on `127.0.0.1:8080` |
-| `app/_version.py` | Application version (single source of truth) |
-| `scripts/release.sh` | Create GitHub release and trigger Docker CI |
+| Input            | Format            | Notes                                                                            |
+|------------------|-------------------|----------------------------------------------------------------------------------|
+| Aegis backup     | Encrypted `.json` | Export from Aegis with encryption enabled; plain JSON backups are not supported  |
+| KeePass database | `.kdbx`           | From KeePass 2.x, KeePassXC, or compatible clients                               |
+| KeePass keyfile  | Optional          | Required only if your database uses a keyfile in addition to the master password |
 
 ## Configuration
 
 Environment variables can be set in `docker-compose.yml` or passed to Gunicorn when running locally.
 
-| Variable | Default | Description |
-|----------|---------|-------------|
-| `SESSION_TIMEOUT_SECONDS` | `1800` | Idle session timeout in seconds (30 minutes) |
-| `MAX_IN_MEMORY_UPLOAD_BYTES` | `33554432` | Combined upload size kept entirely in RAM (32 MB) |
-| `MAX_UPLOAD_BYTES` | `52428800` | Maximum allowed upload size (50 MB) |
-| `FLASK_SECRET_KEY` | *(random per start)* | Secret used to sign session cookies. Set explicitly if you need stable sessions across restarts (e.g. during development) |
+| Variable                     | Default              | Description                                                                                                               |
+|------------------------------|----------------------|---------------------------------------------------------------------------------------------------------------------------|
+| `SESSION_TIMEOUT_SECONDS`    | `1800`               | Idle session timeout in seconds (30 minutes)                                                                              |
+| `MAX_IN_MEMORY_UPLOAD_BYTES` | `33554432`           | Combined upload size kept entirely in RAM (32 MB)                                                                         |
+| `MAX_UPLOAD_BYTES`           | `52428800`           | Maximum allowed upload size (50 MB)                                                                                       |
+| `FLASK_SECRET_KEY`           | *(random per start)* | Secret used to sign session cookies. Set explicitly if you need stable sessions across restarts (e.g. during development) |
 
 The Docker Compose file also configures:
 
@@ -97,12 +149,12 @@ This enables reliable re-imports: the tool recognises previously linked entries 
 
 ## OTP fields written to KeePass
 
-| Field | Description |
-|-------|-------------|
-| `TimeOtp-Secret-Base32` | TOTP shared secret (Base32) |
-| `TimeOtp-Period` | Time step in seconds |
-| `TimeOtp-Digits` | Number of OTP digits |
-| `TimeOtp-Algorithm` | Hash algorithm (e.g. `HMAC-SHA-1`) |
+| Field                   | Description                        |
+|-------------------------|------------------------------------|
+| `TimeOtp-Secret-Base32` | TOTP shared secret (Base32)        |
+| `TimeOtp-Period`        | Time step in seconds               |
+| `TimeOtp-Digits`        | Number of OTP digits               |
+| `TimeOtp-Algorithm`     | Hash algorithm (e.g. `HMAC-SHA-1`) |
 
 These are KeePass 2.x native TOTP fields, compatible with KeePassXC and Keepass2Android.
 
@@ -112,7 +164,7 @@ These are KeePass 2.x native TOTP fields, compatible with KeePassXC and Keepass2
 - **In-memory processing** — Typical backups are held in wipeable buffers and never written to disk
 - **Secure wipe on session end** — Sensitive buffers are overwritten with random data, then zeroed, when you download or end the session
 - **No server-side retention** — The merged database is streamed to your browser; the server does not keep a copy
-- **Localhost-only host binding (with provided Compose file)** — Gunicorn listens on `0.0.0.0:8080` inside the container (normal for Docker port forwarding). The included `docker-compose.yml` maps that to **`127.0.0.1:8080` on the host**, so other machines cannot reach the app unless you change the port mapping (e.g. to `8080:8080`)
+- **Localhost-only host binding (with provided Compose file)** — Gunicorn listens on `0.0.0.0:8580` inside the container (normal for Docker port forwarding). The included `docker-compose.yml` maps that to **`127.0.0.1:8580` on the host**, so other machines cannot reach the app unless you change the port mapping (e.g. to `8580:8580`)
 - **Hardened container** — Non-root user, read-only filesystem, tmpfs for temporary files
 - **Session cookies** — HttpOnly and SameSite=Strict; there is no login layer (intended for trusted localhost use)
 - **Health check** — `GET /health` returns `200 OK` for container orchestration
@@ -123,79 +175,16 @@ Memory wiping is best-effort. Python `str` and immutable `bytes` objects cannot 
 
 Uploads exceeding the in-memory threshold (>32 MB combined) are encrypted and written to `/tmp` inside the container. Those files are shredded when the session ends.
 
-## Development
-
-**Requirements:** Python 3.12+ (matches the Docker image).
-
-```bash
-python3 -m venv venv
-source venv/bin/activate
-pip install -r requirements.txt
-gunicorn --bind 127.0.0.1:8080 --workers 1 --timeout 120 wsgi:app
-```
-
-Open [http://localhost:8080](http://localhost:8080). Use a single worker so in-memory session state stays consistent.
-
-## Releasing
-
-Version is defined in [`app/_version.py`](app/_version.py). Tag conventions:
-
-| Layer | Format | Example |
-|-------|--------|---------|
-| Git tag / GitHub Release | `vX.Y.Z` | `v0.1.0` |
-| Docker image tag | `X.Y.Z` | `0.1.0` |
-| `app/_version.py` / UI footer | `X.Y.Z` | `0.1.0` |
-
-To publish a release:
-
-1. Bump `__version__` in `app/_version.py`
-2. Write `release-notes/RELEASE_NOTES_<version>.md` — use [`dev/release-new-version-prompt.md`](dev/release-new-version-prompt.md) when preparing notes and updating `dev/CHANGELOG.md`
-3. Commit the changes
-4. Run `./scripts/release.sh` (use `--dry-run` first to validate)
-
-See [`dev/DEVEL.md`](dev/DEVEL.md) for the full release checklist.
-
-The script creates a GitHub Release (`vX.Y.Z`), which triggers CI to build and publish multi-arch Docker images to `ghcr.io/wsj-br/aegis-keepass`.
-
-### Pull published image
-
-```bash
-docker pull ghcr.io/wsj-br/aegis-keepass:latest
-docker run --rm -p 127.0.0.1:8080:8080 ghcr.io/wsj-br/aegis-keepass:latest
-```
 
 ## Troubleshooting
 
-| Issue | What to try |
-|-------|-------------|
-| Upload rejected | Confirm the Aegis file is an **encrypted** backup and the KeePass file is a valid `.kdbx`. Check file sizes against `MAX_UPLOAD_BYTES`. |
-| Wrong password | Aegis and KeePass passwords are validated at upload; re-upload with the correct credentials. |
-| Unmatched entries | Use manual linking in the review step. Matching depends on title similarity—rename entries in KeePass or Aegis if titles differ significantly. |
-| Session expired | Idle sessions time out after 30 minutes by default. Start again from the upload page. |
-| Port already in use | Stop any process on port 8080, or change the host port mapping in `docker-compose.yml`. |
-
-## Workflow
-
-```
-                    upload
-┌─────────────────┐         ┌─────────────────┐
-│  Aegis Backup   │         │  KeePass .kdbx  │
-│  (encrypted)    │         │                 │
-└────────┬────────┘         └────────┬────────┘
-         │                           │
-         └─────────────┬─────────────┘
-                       ▼
-           ┌──────────────────────┐
-           │  Web App (Docker)    │
-           │  match · apply       │
-           └──────────┬───────────┘
-                      │ download (browser)
-                      ▼
-           ┌────────────────────────┐
-           │  keepass-merged.kdbx   │
-           │  (replace in KeePass)  │
-           └────────────────────────┘
-```
+| Issue               | What to try                                                                                                                                    |
+|---------------------|------------------------------------------------------------------------------------------------------------------------------------------------|
+| Upload rejected     | Confirm the Aegis file is an **encrypted** backup and the KeePass file is a valid `.kdbx`. Check file sizes against `MAX_UPLOAD_BYTES`.        |
+| Wrong password      | Aegis and KeePass passwords are validated at upload; re-upload with the correct credentials.                                                   |
+| Unmatched entries   | Use manual linking in the review step. Matching depends on title similarity—rename entries in KeePass or Aegis if titles differ significantly. |
+| Session expired     | Idle sessions time out after 30 minutes by default. Start again from the upload page.                                                          |
+| Port already in use | Stop any process on port 8580, or change the host port mapping in `docker-compose.yml`.                                                        |
 
 ## License
 

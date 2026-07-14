@@ -2,7 +2,7 @@ services:
   web:
     build: .
     ports:
-      - "127.0.0.1:8080:8080"
+      - "127.0.0.1:8580:8580"
     environment:
       - SESSION_TIMEOUT_SECONDS=1800
       - MAX_IN_MEMORY_UPLOAD_BYTES=33554432

@@ -7,6 +7,12 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [0.1.2] - 2026-07-14
+
+### Added
+- One-command container start scripts at repo root: `aegis-keepass-start.sh` (Linux/macOS), `aegis-keepass-start.ps1` (Docker Desktop), and `aegis-keepass-start-wslc.ps1` (WSL Containers / `wslc`).
+- `scripts/release.sh` attaches the three start scripts as GitHub Release assets (`releases/latest/download/...`).
+
 ## [0.1.1] - 2026-07-12
 
 ### Added

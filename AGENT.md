@@ -148,10 +148,10 @@ Run locally (preferred for fast iteration):
 ```bash
 source .venv/bin/activate
 export FLASK_SECRET_KEY=dev-secret   # optional; stabilizes session cookies across restarts
-gunicorn --bind 127.0.0.1:8080 --workers 1 --timeout 120 wsgi:app
+gunicorn --bind 127.0.0.1:8580 --workers 1 --timeout 120 wsgi:app
 ```
 
-Open [http://127.0.0.1:8080](http://127.0.0.1:8080).
+Open [http://127.0.0.1:8580](http://127.0.0.1:8580).
 
 Run in Docker (matches production image):
 
@@ -179,7 +179,7 @@ Fix any syntax or import errors before proceeding.
 ### 2. Health check (server running)
 
 ```bash
-curl -sf http://127.0.0.1:8080/health && echo
+curl -sf http://127.0.0.1:8580/health && echo
 ```
 
 Expect `200`. Use this after starting Gunicorn or Compose.

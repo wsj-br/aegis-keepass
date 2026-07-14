@@ -13,10 +13,12 @@ Create a new release notes file `release-notes/RELEASE_NOTES_<version>.md` for *
 
      ```bash
      docker pull ghcr.io/wsj-br/aegis-keepass:<version>
-     docker run --rm -p 127.0.0.1:8080:8080 ghcr.io/wsj-br/aegis-keepass:<version>
+     docker run --rm -p 127.0.0.1:8580:8580 ghcr.io/wsj-br/aegis-keepass:<version>
      ```
 
-     Follow with: `Open [http://localhost:8080](http://localhost:8080).`
+     Follow with: `Open [http://localhost:8580](http://localhost:8580).`
+
+     Optionally note that start scripts are attached to the GitHub Release as downloadable assets.
    - Optionally add `## Changes` with the detailed changelog bullets (Added / Changed / Fixed / etc.) if the highlights alone would omit useful detail for operators or developers.
    - Don't include the `## [Unreleased]` heading from the changelog.
 5. **Update `dev/CHANGELOG.md`**:
@@ -45,10 +47,10 @@ Developer documentation and agent workflow improvements.
 
 ```bash
 docker pull ghcr.io/wsj-br/aegis-keepass:0.2.0
-docker run --rm -p 127.0.0.1:8080:8080 ghcr.io/wsj-br/aegis-keepass:0.2.0
+docker run --rm -p 127.0.0.1:8580:8580 ghcr.io/wsj-br/aegis-keepass:0.2.0
 ```
 
-Open [http://localhost:8080](http://localhost:8080).
+Open [http://localhost:8580](http://localhost:8580).
 ```
 
 **Related docs** (for context when writing highlights; link in release notes only when user-facing):

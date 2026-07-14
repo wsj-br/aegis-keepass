@@ -4,6 +4,10 @@ set -euo pipefail
 # Creates a GitHub release from local CLI using:
 # - tag/title: v<app/_version.py version>
 # - notes file: release-notes/RELEASE_NOTES_<version>.md
+# - start scripts attached as release assets:
+#     aegis-keepass-start.sh
+#     aegis-keepass-start.ps1
+#     aegis-keepass-start-wslc.ps1
 #
 # If the tag (or a GitHub release for it) already exists, it is removed and
 # the tag is recreated at the current HEAD, then pushed — so you can fix a
@@ -74,6 +78,15 @@ NOTES_FILE="release-notes/RELEASE_NOTES_${VERSION}.md"
 
 [[ -f "$NOTES_FILE" ]] || fail "Release notes file not found: $NOTES_FILE"
 
+START_ASSETS=(
+  aegis-keepass-start.sh
+  aegis-keepass-start.ps1
+  aegis-keepass-start-wslc.ps1
+)
+for asset in "${START_ASSETS[@]}"; do
+  [[ -f "$asset" ]] || fail "Release asset not found: $asset"
+done
+
 if [[ "$VERIFY_CLEAN" == "true" ]] && [[ -n "$(git status --porcelain)" ]]; then
   fail "Working tree is not clean. Commit/stash changes or run with --verify-clean=false"
 fi
@@ -132,12 +145,14 @@ recreate_tag_at_head() {
 
 recreate_tag_at_head
 
-CMD=(gh release create "$TAG" --title "$TAG" --notes-file "$NOTES_FILE")
+# gh release create accepts asset file paths as trailing arguments.
+CMD=(gh release create "$TAG" --title "$TAG" --notes-file "$NOTES_FILE" "${START_ASSETS[@]}")
 
 echo "Release inputs:"
 echo "  Tag:        ${TAG}"
 echo "  Title:      ${TAG}"
 echo "  Notes file: ${NOTES_FILE}"
+echo "  Assets:     ${START_ASSETS[*]}"
 echo "  Docker:     ghcr.io/wsj-br/aegis-keepass:${VERSION}"
 
 if [[ "$DRY_RUN" == "true" ]]; then
@@ -149,6 +164,8 @@ fi
 
 "${CMD[@]}"
 echo "Release created successfully: ${TAG}"
+echo "Start scripts published as release assets (also at:"
+echo "  https://github.com/wsj-br/aegis-keepass/releases/latest/download/<script-name>)"
 
 echo ""
 echo "See the progress at the GitHub repository https://github.com/wsj-br/aegis-keepass/actions"
