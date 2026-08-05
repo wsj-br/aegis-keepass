@@ -129,7 +129,7 @@ wsgi.py                  ← Gunicorn entry: create_app()
 3. **Session model** — state is **in-memory per worker**. Run Gunicorn with **`--workers 1`** locally and in Docker. Do not assume shared storage across workers or restarts.
 4. **API + UI together** — JSON endpoints under `/api/*` are consumed by `app/static/js/*.js`. When changing request/response shape, update both the route and the matching JS.
 5. **Templates** — extend `base.html`; version and GitHub link come from the context processor in `app/__init__.py`.
-6. **Dependencies** — add packages to `requirements.txt`; rebuild Docker (`docker compose up --build`) to pick them up in containers.
+6. **Dependencies** — add runtime packages to `requirements.txt` and test tools to `requirements-dev.txt`; rebuild Docker (`docker compose up --build`) to pick runtime deps up in containers.
 7. **Security-sensitive code** — never log passwords, decrypted vault JSON, or `.kdbx` bytes. Prefer `SecureBytes` over plain `str`/`bytes` for credentials and uploads.
 
 ## Development environment
@@ -140,7 +140,7 @@ Full setup is in [`dev/DEVEL.md`](dev/DEVEL.md). Minimal flow for agents:
 cd /path/to/aegis-keepass
 python3 -m venv .venv
 source .venv/bin/activate
-pip install -r requirements.txt
+pip install -r requirements.txt -r requirements-dev.txt
 ```
 
 Run locally (preferred for fast iteration):
@@ -163,9 +163,20 @@ After changing `Dockerfile` or dependencies, rebuild with `--build`. Python-only
 
 ## Testing changes
 
-There is **no pytest/unittest suite** yet. Agents must run the checks below after non-trivial edits and report what they ran.
+Agents must run the checks below after non-trivial edits and report what they ran.
 
-### 1. Static checks (always)
+### 1. Automated suite (preferred)
+
+With venv activated and `requirements-dev.txt` installed, from repo root:
+
+```bash
+pip install -r requirements.txt -r requirements-dev.txt   # once, or after dep changes
+pytest
+```
+
+Tests live under `tests/` (unit + Flask integration). Fixtures generate synthetic encrypted Aegis/KeePass data at runtime — do not commit real vaults. Fix failing tests before proceeding.
+
+### 2. Static checks (always)
 
 With venv activated, from repo root:
 
@@ -176,7 +187,7 @@ python -c "from app import create_app; create_app(); print('OK')"
 
 Fix any syntax or import errors before proceeding.
 
-### 2. Health check (server running)
+### 3. Health check (server running)
 
 ```bash
 curl -sf http://127.0.0.1:8580/health && echo
@@ -184,7 +195,7 @@ curl -sf http://127.0.0.1:8580/health && echo
 
 Expect `200`. Use this after starting Gunicorn or Compose.
 
-### 3. Scope-appropriate manual checks
+### 4. Scope-appropriate manual checks
 
 | Area changed | What to verify |
 |--------------|----------------|
@@ -205,9 +216,9 @@ Full end-to-end smoke (when touching core flow):
 
 Use **copies** of real backups only on localhost. Do not add sample vaults to the repo.
 
-### 4. When tests are not runnable
+### 5. When tests are not runnable
 
-If you cannot run the app (missing Docker, no test vaults, etc.), say so explicitly and list what you verified statically. Do not claim end-to-end verification without evidence.
+If you cannot run `pytest` or the app (missing deps, Docker, etc.), say so explicitly and list what you verified statically. Do not claim end-to-end verification without evidence.
 
 ## Other project docs
 

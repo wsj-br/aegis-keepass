@@ -518,11 +518,10 @@ def api_save():
         if not a.get('keepass_uuid')
     )
 
+    # Wipe immediately: download bytes are already captured in kdbx_bytes.
+    # (call_on_close is unreliable under Flask's test client and delays wipe.)
     session_id = session.session_id
-    store = get_session_store()
-
-    def _wipe_after_send():
-        store.destroy(session_id)
+    get_session_store().destroy(session_id)
 
     response = send_file(
         io.BytesIO(kdbx_bytes),
@@ -530,7 +529,6 @@ def api_save():
         as_attachment=True,
         download_name='keepass-merged.kdbx',
     )
-    response.call_on_close(_wipe_after_send)
     response.headers['X-Updated-Count'] = str(updated_count)
     response.headers['X-Cleaned-Count'] = str(cleaned_count)
     response.headers['X-Unmatched-Count'] = str(unmatched_count)

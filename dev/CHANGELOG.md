@@ -7,6 +7,16 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+### Added
+- Local pytest suite (`tests/`) with library unit tests and Flask API/integration tests; synthetic Aegis/KeePass fixtures are generated at runtime via `tests/fixtures/builders.py` (`requirements-dev.txt`, `pytest.ini`).
+
+### Changed
+- Documented pytest install/run steps in `dev/DEVEL.md` and `AGENTS.md` (runtime deps stay in `requirements.txt`).
+- `/api/save` now wipes the session immediately after building download bytes instead of relying on `call_on_close` (unreliable under Flask’s test client and delayed wipe).
+
+### Fixed
+- Upload process steps no longer crash in `finally` after a failed decrypt/open that already destroyed the session (`pending_*` buffers may already be wiped).
+
 ## [0.1.4] - 2026-07-14
 
 ### Added

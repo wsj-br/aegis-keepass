@@ -9,7 +9,7 @@ Regenerate with:
 
   ./scripts/update-notices.sh
 
-Generated: 2026-07-14T16:50:43Z
+Generated: 2026-08-05T19:57:30Z
 
 --------------------------------------------------------------------------------
 
@@ -326,7 +326,7 @@ SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
 --------------------------------------------------------------------------------
 
 cffi
-2.1.0
+2.1.1
 MIT-0
 
 Except when otherwise stated (look for LICENSE files in directories or
@@ -418,7 +418,7 @@ SOFTWARE.
 --------------------------------------------------------------------------------
 
 cryptography
-49.0.0
+50.0.0
 Apache-2.0 OR BSD-3-Clause
 
 This software is made available under the terms of *either* of the licenses
@@ -531,7 +531,7 @@ SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 --------------------------------------------------------------------------------
 
 packaging
-26.2
+26.3
 Apache-2.0 OR BSD-2-Clause
 
 This software is made available under the terms of *either* of the licenses

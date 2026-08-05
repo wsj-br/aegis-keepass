@@ -150,8 +150,10 @@ def api_upload_process():
             store.destroy(session.session_id)
             return jsonify({'error': str(exc)}), 400
         finally:
-            session.pending_aegis.wipe()
-            session.pending_aegis = None
+            # destroy() may already have wiped these on decrypt failure
+            if session.pending_aegis is not None:
+                session.pending_aegis.wipe()
+                session.pending_aegis = None
             if session.aegis_password is not None:
                 session.aegis_password.wipe()
                 session.aegis_password = None
@@ -189,8 +191,10 @@ def api_upload_process():
             store.destroy(session.session_id)
             return jsonify({'error': str(exc)}), 400
         finally:
-            session.pending_keepass.wipe()
-            session.pending_keepass = None
+            # destroy() may already have wiped these on open failure
+            if session.pending_keepass is not None:
+                session.pending_keepass.wipe()
+                session.pending_keepass = None
             if session.pending_keyfile is not None:
                 session.pending_keyfile.wipe()
                 session.pending_keyfile = None
