@@ -1,3 +1,9 @@
+
+<p align="center">
+  <img src="app/static/img/logo.png" alt="Aegis-KeePass OTP Sync logo" width="96" height="96">
+</p>
+
+
 # Aegis-KeePass OTP Sync
 
 Import TOTP secrets from [Aegis Authenticator](https://getaegis.app/) encrypted backups into [KeePass](https://keepass.info/) entries. Upload your files in the browser, review matches, and download a merged `.kdbx` database—no plaintext XML export required.
@@ -129,6 +135,8 @@ The Docker Compose file also configures:
 
 - **Read-only root filesystem** — the container cannot write outside `/tmp`
 - **Tmpfs for `/tmp`** — temporary spill storage for large uploads (64 MB), cleared when the container stops
+- **Dropped capabilities** — `cap_drop: ALL` and `no-new-privileges`
+- **Optional `FLASK_SECRET_KEY`** — uncomment the env entry in `docker-compose.yml` after exporting the variable on the host (do not leave it enabled unset, or the container gets an empty secret)
 
 ## How matching works
 
@@ -173,6 +181,7 @@ These are KeePass 2.x native TOTP fields, compatible with KeePassXC and Keepass2
 - **No server-side retention** — The merged database is streamed to your browser; the server does not keep a copy
 - **Localhost-only host binding (with provided Compose file)** — Gunicorn listens on `0.0.0.0:8580` inside the container (normal for Docker port forwarding). The included `docker-compose.yml` maps that to **`127.0.0.1:8580` on the host**, so other machines cannot reach the app unless you change the port mapping (e.g. to `8580:8580`)
 - **Hardened container** — Non-root user, read-only filesystem, tmpfs for temporary files
+- **Offline UI** — CSS, JS, and icons are bundled in the image under `app/static/`; the pages do not load fonts or scripts from the internet
 - **Session cookies** — HttpOnly and SameSite=Strict; there is no login layer (intended for trusted localhost use)
 - **Health check** — `GET /health` returns `200 OK` for container orchestration
 
@@ -195,5 +204,7 @@ Uploads exceeding the in-memory threshold (>32 MB combined) are encrypted and wr
 
 ## License
 
-Licensed under the [GNU General Public License v3.0](https://www.gnu.org/licenses/gpl-3.0.html). 
 Copyright (c) 2026 Waldemar Scudeller Jr.
+
+Licensed under the [GNU General Public License v3.0](https://www.gnu.org/licenses/gpl-3.0.html). 
+

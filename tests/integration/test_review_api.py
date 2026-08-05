@@ -12,13 +12,26 @@ def _find_entry(entries_json, aegis_uuid: str):
 def test_aegis_entries_filter(authed_client):
     all_resp = authed_client.get("/api/aegis-entries?status=all")
     assert all_resp.status_code == 200
-    assert all_resp.get_json()["stats"]["total"] == 3
+    body_all = all_resp.get_json()
+    assert body_all["stats"]["total"] == 3
+    assert "no_uuid" in body_all["stats"]
 
     unmatched = authed_client.get("/api/aegis-entries?status=unmatched")
     assert unmatched.status_code == 200
     body = unmatched.get_json()
     assert body["stats"]["unmatched"] >= 1
     assert all(not e["matched"] for e in body["entries"])
+
+    no_uuid = authed_client.get("/api/aegis-entries?status=no_uuid")
+    assert no_uuid.status_code == 200
+    no_uuid_body = no_uuid.get_json()
+    assert no_uuid_body["stats"]["no_uuid"] >= 1
+    assert all(
+        e["matched"] and not e["keepass_has_aegis_uuid"]
+        for e in no_uuid_body["entries"]
+    )
+    # Fixture: GitHub is fuzzy-matched without a prior AegisUUID marker.
+    assert any(e["aegis_uuid"] == GITHUB_AEGIS_UUID for e in no_uuid_body["entries"])
 
     q = authed_client.get("/api/aegis-entries?q=GitHub")
     assert q.status_code == 200

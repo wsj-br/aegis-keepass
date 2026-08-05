@@ -1,9 +1,35 @@
+# Python environments and caches
 .venv/
 venv/
 __pycache__/
 *.pyc
+.pytest_cache/
+pytest-cache-files-*/
+.mypy_cache/
+.ruff_cache/
+.coverage
+htmlcov/
+dist/
+*.egg-info/
+.tox/
+
+# VCS / editor / design tooling
 .git/
+.github/
 .cursor/
+.impeccable/
+
+# Non-runtime tree (image only needs app + lib + wsgi + deps + notices)
+tests/
+dev/
+scripts/
+release-notes/
+*.md
+AGENTS.md
+pytest.ini
+requirements-dev.txt
+docker-compose.yml
+aegis-keepass-start*
 
 # User uploads and secrets
 *.json

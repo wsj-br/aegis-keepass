@@ -9,11 +9,18 @@ __pycache__/
 *.pyo
 *.pyd
 .pytest_cache/
+pytest-cache-files-*/
 .mypy_cache/
 .ruff_cache/
+.coverage
+htmlcov/
+dist/
+*.egg-info/
+.tox/
 
 # User uploads and secrets (never commit)
 *.json
+!.impeccable/design.json
 *.kdbx
 *.key
 *.keyx

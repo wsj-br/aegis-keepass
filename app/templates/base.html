@@ -2,22 +2,55 @@
 <html lang="en">
 <head>
     <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
     <title>{% block title %}Aegis-KeePass OTP Sync{% endblock %}</title>
+    <script>
+    (function () {
+        try {
+            var pref = localStorage.getItem('ak-theme') || 'system';
+            var theme = 'dark';
+            if (pref === 'light' || pref === 'dark') {
+                theme = pref;
+            } else {
+                if (window.matchMedia('(prefers-color-scheme: light)').matches) theme = 'light';
+                else if (window.matchMedia('(prefers-color-scheme: dark)').matches) theme = 'dark';
+            }
+            document.documentElement.setAttribute('data-theme', theme);
+            document.documentElement.setAttribute('data-theme-pref', pref);
+        } catch (e) {
+            document.documentElement.setAttribute('data-theme', 'dark');
+            document.documentElement.setAttribute('data-theme-pref', 'system');
+        }
+    })();
+    </script>
     <link rel="stylesheet" href="{{ url_for('static', filename='css/app.css') }}">
+    <link rel="icon" type="image/png" sizes="48x48" href="{{ url_for('static', filename='img/favicon.png') }}">
+    <link rel="icon" type="image/png" sizes="32x32" href="{{ url_for('static', filename='img/favicon-32.png') }}">
+    <link rel="apple-touch-icon" href="{{ url_for('static', filename='img/apple-touch-icon.png') }}">
     {% block head %}{% endblock %}
 </head>
 <body>
     <header class="site-header">
         <div class="container header-inner">
             <div class="brand">
-                <div class="brand-mark" aria-hidden="true">AK</div>
+                <img class="brand-mark" src="{{ url_for('static', filename='img/logo.png') }}" width="44" height="44" alt="" aria-hidden="true">
                 <div>
                     <h1>Aegis-KeePass OTP Sync</h1>
                     <p class="subtitle">Import OTP secrets · Match entries · Merge into KeePass</p>
                 </div>
             </div>
             {% block steps %}{% endblock %}
+            <button type="button" class="theme-toggle" id="theme-toggle" aria-label="Color theme: System. Click to change." title="Theme: System">
+                <svg class="theme-toggle-icon" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+                    <circle cx="12" cy="12" r="9"></circle>
+                    <path d="M12 3a9 9 0 0 0 0 18Z" fill="currentColor"></path>
+                    <path d="M12 7v2"></path>
+                    <path d="M12 15v2"></path>
+                    <path d="M16.5 9.5l-1.2 1.2"></path>
+                    <path d="M16.5 14.5l-1.2-1.2"></path>
+                </svg>
+                <span class="theme-toggle-label" id="theme-toggle-label">System</span>
+            </button>
         </div>
     </header>
 
@@ -29,7 +62,7 @@
         <div class="container footer-inner">
             <span>v{{ app_version }}</span>
             <a href="{{ github_repo_url }}" target="_blank" rel="noopener noreferrer" aria-label="GitHub repository">
-                <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 16 16" width="20" height="20" fill="currentColor" style="vertical-align: middle; margin-right: 0.4em;">
+                <svg class="footer-github-icon" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 16 16" width="20" height="20" fill="currentColor" aria-hidden="true">
                     <path d="M8 0C3.58 0 0 3.58 0 8a8 8 0 005.47 7.59c.4.07.55-.17.55-.38
                     0-.19-.01-.82-.01-1.49-2.01.37-2.53-.49-2.69-.94-.09-.23-.48-.94-.82-1.13-.28-.15-.68-.52
                     -.01-.53.63-.01 1.08.58 1.23.82.72 1.21 1.87.87 2.33.66.07-.52.28-.87.5-1.07-1.78
@@ -40,11 +73,12 @@
                 </svg>
                 wsj-br/aegis-keepass
             </a>
-  
         </div>
     </footer>
 
     <div class="toast" id="toast" role="status" aria-live="polite"></div>
+    <script src="{{ url_for('static', filename='js/theme.js') }}"></script>
+    <script src="{{ url_for('static', filename='js/toast.js') }}"></script>
     {% block scripts %}{% endblock %}
 </body>
 </html>

@@ -22,16 +22,25 @@
     <form id="upload-form" class="upload-form" enctype="multipart/form-data" novalidate>
         <div class="drop-grid">
             <label class="drop-zone" id="aegis-drop" for="aegis-input">
-                <input type="file" id="aegis-input" name="aegis" accept=".json,application/json" hidden>
-                <div class="drop-icon" aria-hidden="true">📁</div>
+                <input type="file" id="aegis-input" class="visually-hidden" name="aegis" accept=".json,application/json">
+                <div class="drop-icon" aria-hidden="true">
+                    <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round">
+                        <path d="M3 7.5A2.5 2.5 0 0 1 5.5 5H9l2 2h7.5A2.5 2.5 0 0 1 21 9.5v7A2.5 2.5 0 0 1 18.5 19h-13A2.5 2.5 0 0 1 3 16.5v-9z"></path>
+                    </svg>
+                </div>
                 <div class="drop-title">Aegis backup</div>
                 <div class="drop-hint">Encrypted JSON export</div>
                 <div class="drop-file" id="aegis-name">Drop file or click to browse</div>
             </label>
 
             <label class="drop-zone" id="keepass-drop" for="keepass-input">
-                <input type="file" id="keepass-input" name="keepass" accept=".kdbx,application/octet-stream" hidden>
-                <div class="drop-icon" aria-hidden="true">🔒</div>
+                <input type="file" id="keepass-input" class="visually-hidden" name="keepass" accept=".kdbx,application/octet-stream">
+                <div class="drop-icon" aria-hidden="true">
+                    <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round">
+                        <rect x="5" y="11" width="14" height="10" rx="2"></rect>
+                        <path d="M8 11V8a4 4 0 0 1 8 0v3"></path>
+                    </svg>
+                </div>
                 <div class="drop-title">KeePass database</div>
                 <div class="drop-hint">Encrypted .kdbx file</div>
                 <div class="drop-file" id="keepass-name">Drop file or click to browse</div>
@@ -40,21 +49,51 @@
 
         <div class="field">
             <label for="aegis-password-input">Aegis backup password</label>
-            <input type="password" id="aegis-password-input" name="aegis_password" autocomplete="off" required
-                   placeholder="Password for your Aegis backup">
+            <div class="password-field">
+                <input type="password" id="aegis-password-input" class="password-input" name="aegis_password" autocomplete="off" required
+                       placeholder="Password for your Aegis backup">
+                <button type="button" class="password-toggle" data-password-toggle="aegis-password-input" aria-label="Show password" aria-pressed="false" aria-controls="aegis-password-input">
+                    <svg class="password-toggle-icon password-toggle-icon-show" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+                        <path d="M2 12s3.5-6 10-6 10 6 10 6-3.5 6-10 6-10-6-10-6z"></path>
+                        <circle cx="12" cy="12" r="3"></circle>
+                    </svg>
+                    <svg class="password-toggle-icon password-toggle-icon-hide" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+                        <path d="M17.94 17.94A10.07 10.07 0 0 1 12 18c-6.5 0-10-6-10-6a18.45 18.45 0 0 1 5.06-5.94"></path>
+                        <path d="M9.9 4.24A9.12 9.12 0 0 1 12 4c6.5 0 10 6 10 6a18.5 18.5 0 0 1-2.16 3.19"></path>
+                        <path d="M14.12 14.12a3 3 0 1 1-4.24-4.24"></path>
+                        <path d="M1 1l22 22"></path>
+                    </svg>
+                </button>
+            </div>
         </div>
 
         <div class="field">
             <label for="keepass-password-input">KeePass master password</label>
-            <input type="password" id="keepass-password-input" name="keepass_password" autocomplete="off" required
-                   placeholder="Master password for your .kdbx database">
+            <div class="password-field">
+                <input type="password" id="keepass-password-input" class="password-input" name="keepass_password" autocomplete="off" required
+                       placeholder="Master password for your .kdbx database">
+                <button type="button" class="password-toggle" data-password-toggle="keepass-password-input" aria-label="Show password" aria-pressed="false" aria-controls="keepass-password-input">
+                    <svg class="password-toggle-icon password-toggle-icon-show" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+                        <path d="M2 12s3.5-6 10-6 10 6 10 6-3.5 6-10 6-10-6-10-6z"></path>
+                        <circle cx="12" cy="12" r="3"></circle>
+                    </svg>
+                    <svg class="password-toggle-icon password-toggle-icon-hide" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+                        <path d="M17.94 17.94A10.07 10.07 0 0 1 12 18c-6.5 0-10-6-10-6a18.45 18.45 0 0 1 5.06-5.94"></path>
+                        <path d="M9.9 4.24A9.12 9.12 0 0 1 12 4c6.5 0 10 6 10 6a18.5 18.5 0 0 1-2.16 3.19"></path>
+                        <path d="M14.12 14.12a3 3 0 1 1-4.24-4.24"></path>
+                        <path d="M1 1l22 22"></path>
+                    </svg>
+                </button>
+            </div>
         </div>
 
         <div class="field">
             <label for="keyfile-input">KeePass keyfile <span class="field-optional">(optional)</span></label>
-            <input type="file" id="keyfile-input" name="keyfile" accept="*/*" hidden>
-            <button type="button" class="btn btn-secondary btn-sm" id="keyfile-btn">Choose keyfile…</button>
-            <span class="drop-file" id="keyfile-name">Only if your database requires a keyfile</span>
+            <div class="keyfile-row">
+                <input type="file" id="keyfile-input" class="visually-hidden" name="keyfile" accept="*/*" tabindex="-1">
+                <button type="button" class="btn btn-secondary btn-sm" id="keyfile-btn" aria-describedby="keyfile-name">Choose keyfile…</button>
+                <span class="drop-file" id="keyfile-name">Only if your database requires a keyfile</span>
+            </div>
         </div>
 
         <div class="form-actions">

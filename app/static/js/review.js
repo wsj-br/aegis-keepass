@@ -7,13 +7,7 @@ let searchTotal = 0;
 let keepassSearchQuery = '';
 const SEARCH_PAGE_SIZE = 25;
 let conflictModalResolver = null;
-
-function showToast(msg, type) {
-    const t = document.getElementById('toast');
-    t.textContent = msg;
-    t.className = 'toast show ' + (type || '');
-    setTimeout(() => { t.className = 'toast'; }, 5000);
-}
+const dialogStack = [];
 
 function escHtml(s) {
     const d = document.createElement('div');
@@ -25,11 +19,142 @@ function escAttr(s) {
     return (s || '').replace(/&/g, '&amp;').replace(/"/g, '&quot;').replace(/</g, '&lt;');
 }
 
+function getFocusable(container) {
+    if (!container) return [];
+    const selector = [
+        'a[href]',
+        'button:not([disabled])',
+        'input:not([disabled]):not([type="hidden"])',
+        'select:not([disabled])',
+        'textarea:not([disabled])',
+        '[tabindex]:not([tabindex="-1"])',
+    ].join(', ');
+    return Array.from(container.querySelectorAll(selector)).filter((el) => {
+        if (el.getAttribute('aria-hidden') === 'true') return false;
+        if (el.classList.contains('visually-hidden') && el.tabIndex < 0) return false;
+        return true;
+    });
+}
+
+function openDialog(overlay, initialFocus) {
+    if (!overlay || overlay.classList.contains('open')) {
+        if (overlay && overlay.classList.contains('open') && initialFocus) {
+            initialFocus.focus();
+        }
+        return;
+    }
+    dialogStack.push({
+        overlay: overlay,
+        prevFocus: document.activeElement,
+    });
+    overlay.classList.add('open');
+    overlay.setAttribute('aria-hidden', 'false');
+    const dialog = overlay.querySelector('[role="dialog"]') || overlay;
+    requestAnimationFrame(() => {
+        const focusables = getFocusable(dialog);
+        const target = initialFocus && dialog.contains(initialFocus)
+            ? initialFocus
+            : focusables[0];
+        if (target) target.focus();
+    });
+}
+
+function closeDialog(overlay) {
+    if (!overlay || !overlay.classList.contains('open')) return;
+    overlay.classList.remove('open');
+    overlay.setAttribute('aria-hidden', 'true');
+    const idx = dialogStack.findIndex((entry) => entry.overlay === overlay);
+    if (idx < 0) return;
+    const entry = dialogStack.splice(idx, 1)[0];
+    if (dialogStack.length) {
+        const top = dialogStack[dialogStack.length - 1];
+        const dialog = top.overlay.querySelector('[role="dialog"]') || top.overlay;
+        const focusables = getFocusable(dialog);
+        if (focusables.length && !top.overlay.contains(document.activeElement)) {
+            focusables[0].focus();
+        }
+        return;
+    }
+    if (entry.prevFocus && typeof entry.prevFocus.focus === 'function') {
+        entry.prevFocus.focus();
+    }
+}
+
+function topDialogOverlay() {
+    return dialogStack.length ? dialogStack[dialogStack.length - 1].overlay : null;
+}
+
+function syncFilterPressed() {
+    document.querySelectorAll('.filter-btn').forEach((btn) => {
+        btn.setAttribute(
+            'aria-pressed',
+            btn.classList.contains('active') ? 'true' : 'false',
+        );
+    });
+}
+
+document.addEventListener('keydown', (e) => {
+    const overlay = topDialogOverlay();
+    if (!overlay) return;
+    const dialog = overlay.querySelector('[role="dialog"]') || overlay;
+
+    if (e.key === 'Escape') {
+        e.preventDefault();
+        if (overlay.id === 'conflict-modal') {
+            closeConflictModal(false);
+        } else if (overlay.id === 'info-modal') {
+            closeInfo();
+        } else if (overlay.id === 'picker-modal') {
+            closePicker();
+        } else if (overlay.id === 'save-modal') {
+            if (!saveProgress.busy) closeSaveModal();
+        } else if (overlay.id === 'end-session-modal') {
+            closeEndSessionModal();
+        }
+        return;
+    }
+
+    if (e.key !== 'Tab') return;
+    const focusables = getFocusable(dialog);
+    if (!focusables.length) {
+        e.preventDefault();
+        return;
+    }
+    const first = focusables[0];
+    const last = focusables[focusables.length - 1];
+    if (e.shiftKey && document.activeElement === first) {
+        e.preventDefault();
+        last.focus();
+    } else if (!e.shiftKey && document.activeElement === last) {
+        e.preventDefault();
+        first.focus();
+    } else if (!dialog.contains(document.activeElement)) {
+        e.preventDefault();
+        (e.shiftKey ? last : first).focus();
+    }
+});
+
+const INFO_ICON = '<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><circle cx="12" cy="12" r="9"></circle><path d="M12 10v6"></path><path d="M12 7h.01"></path></svg>';
+
 async function loadEntries() {
+    const tbody = document.getElementById('entries-body');
     const params = new URLSearchParams({ status: currentStatus, q: aegisFilter });
-    const resp = await fetch('/api/aegis-entries?' + params);
+    let resp;
+    try {
+        resp = await fetch('/api/aegis-entries?' + params);
+    } catch (err) {
+        tbody.innerHTML = '<tr><td colspan="5" class="empty">Could not load entries. Check your connection and try again.</td></tr>';
+        showToast('Failed to load entries: ' + err.message, 'error');
+        return;
+    }
     if (resp.status === 401) {
         window.location.href = '/';
+        return;
+    }
+    if (!resp.ok) {
+        const err = await resp.json().catch(() => ({}));
+        tbody.innerHTML = '<tr><td colspan="5" class="empty">Could not load entries.</td></tr>';
+        showToast(err.error || 'Failed to load entries', 'error');
         return;
     }
     const data = await resp.json();
@@ -38,7 +163,6 @@ async function loadEntries() {
     document.getElementById('stat-matched').textContent = data.stats.matched;
     document.getElementById('stat-unmatched').textContent = data.stats.unmatched;
 
-    const tbody = document.getElementById('entries-body');
     if (!data.entries.length) {
         tbody.innerHTML = '<tr><td colspan="5" class="empty">No entries found.</td></tr>';
         return;
@@ -57,7 +181,7 @@ async function loadEntries() {
                 + escHtml(e.keepass_title)
                 + (e.keepass_has_otp ? ' <span class="otp-badge">OTP</span>' : '')
                 + '</span>'
-                + '<button type="button" class="info-kp-btn" data-uuid="' + e.keepass_uuid + '" title="Entry details" aria-label="Entry details">ℹ️</button>'
+                + '<button type="button" class="info-kp-btn" data-uuid="' + e.keepass_uuid + '" title="Entry details" aria-label="Entry details">' + INFO_ICON + '</button>'
                 + '</div>';
         }
 
@@ -78,7 +202,7 @@ async function loadEntries() {
         return '<tr class="' + rowClass.trim() + '" data-uuid="' + e.aegis_uuid + '">'
             + '<td>' + statusBadge + modBadge + '</td>'
             + '<td><div class="aegis-title-row"><strong>' + escHtml(e.display) + '</strong>'
-            + '<button type="button" class="info-aegis-btn" data-uuid="' + e.aegis_uuid + '" title="Entry details" aria-label="Entry details">ℹ️</button>'
+            + '<button type="button" class="info-aegis-btn" data-uuid="' + e.aegis_uuid + '" title="Entry details" aria-label="Entry details">' + INFO_ICON + '</button>'
             + '</div>'
             + '<div class="meta">' + escHtml(e.issuer) + ' / ' + escHtml(e.name) + '</div></td>'
             + '<td>' + kpCell + '</td>'
@@ -92,10 +216,12 @@ document.querySelectorAll('.filter-btn').forEach(btn => {
     btn.addEventListener('click', () => {
         document.querySelectorAll('.filter-btn').forEach(b => b.classList.remove('active'));
         btn.classList.add('active');
+        syncFilterPressed();
         currentStatus = btn.dataset.status;
         loadEntries();
     });
 });
+syncFilterPressed();
 
 document.getElementById('aegis-filter').addEventListener('input', (e) => {
     aegisFilter = e.target.value;
@@ -108,17 +234,17 @@ function openPicker(aegisUuid, display) {
     searchPage = 0;
     keepassSearchQuery = '';
     document.getElementById('picker-title').textContent = 'Select KeePass entry for: ' + display;
-    document.getElementById('keepass-search').value = '';
+    const searchInput = document.getElementById('keepass-search');
+    searchInput.value = '';
     document.getElementById('search-results').innerHTML = '<p class="meta">Loading…</p>';
     document.getElementById('search-pagination').innerHTML = '';
-    document.getElementById('picker-modal').classList.add('open');
-    document.getElementById('keepass-search').focus();
+    openDialog(document.getElementById('picker-modal'), searchInput);
     searchKeepass('');
 }
 
 function closePicker() {
     pickerAegisUuid = null;
-    document.getElementById('picker-modal').classList.remove('open');
+    closeDialog(document.getElementById('picker-modal'));
 }
 
 function detailField(label, value) {
@@ -163,7 +289,10 @@ async function showKeepassInfo(keepassUuid) {
     }
     document.getElementById('info-modal-title').textContent = 'KeePass Entry Details';
     document.getElementById('info-body').innerHTML = renderKeepassInfoBody(data);
-    document.getElementById('info-modal').classList.add('open');
+    openDialog(
+        document.getElementById('info-modal'),
+        document.getElementById('info-close-btn'),
+    );
 }
 
 async function showAegisInfo(aegisUuid) {
@@ -175,11 +304,14 @@ async function showAegisInfo(aegisUuid) {
     }
     document.getElementById('info-modal-title').textContent = 'Aegis Entry Details';
     document.getElementById('info-body').innerHTML = renderAegisInfoBody(data);
-    document.getElementById('info-modal').classList.add('open');
+    openDialog(
+        document.getElementById('info-modal'),
+        document.getElementById('info-close-btn'),
+    );
 }
 
 function closeInfo() {
-    document.getElementById('info-modal').classList.remove('open');
+    closeDialog(document.getElementById('info-modal'));
 }
 
 function renderConflictBody(keepassTitle, linked) {
@@ -199,12 +331,15 @@ function showConflictModal(keepassTitle, linked) {
     return new Promise((resolve) => {
         conflictModalResolver = resolve;
         document.getElementById('conflict-body').innerHTML = renderConflictBody(keepassTitle, linked);
-        document.getElementById('conflict-modal').classList.add('open');
+        openDialog(
+            document.getElementById('conflict-modal'),
+            document.getElementById('conflict-cancel-btn'),
+        );
     });
 }
 
 function closeConflictModal(confirmed) {
-    document.getElementById('conflict-modal').classList.remove('open');
+    closeDialog(document.getElementById('conflict-modal'));
     if (conflictModalResolver) {
         conflictModalResolver(confirmed);
         conflictModalResolver = null;
@@ -235,7 +370,7 @@ function renderSearchResults(results, highlightUuid) {
             + (sub ? '<div class="sub">' + escHtml(sub) + '</div>' : '')
             + '</div>'
             + '<div class="result-actions">'
-            + '<button type="button" class="info-kp-btn" data-uuid="' + r.uuid + '" title="Entry details" aria-label="Entry details">ℹ️</button>'
+            + '<button type="button" class="info-kp-btn" data-uuid="' + r.uuid + '" title="Entry details" aria-label="Entry details">' + INFO_ICON + '</button>'
             + '<button class="btn btn-primary btn-sm select-kp-btn" data-uuid="' + r.uuid + '"'
             + ' data-title="' + escAttr(r.title) + '"'
             + ' data-linked-uuid="' + escAttr(r.linked_aegis_uuid || '') + '"'
@@ -451,18 +586,173 @@ function showCompleteView(summary) {
     document.getElementById('complete-section').hidden = false;
 }
 
-document.getElementById('save-btn').addEventListener('click', async () => {
-    if (!confirm('Apply imported OTP secrets and download merged KeePass database?')) return;
+const SAVE_STEPS = [
+    {
+        id: 'cleanup',
+        label: 'Cleaning stale OTP links',
+        detail: 'Removing Aegis markers and OTP fields from unlinked KeePass entries.',
+    },
+    {
+        id: 'apply',
+        label: 'Applying OTP secrets',
+        detail: 'Writing TimeOtp fields and AegisUUID markers for matched entries.',
+    },
+    {
+        id: 'build',
+        label: 'Building merged database',
+        detail: 'Encrypting the updated KeePass database in memory.',
+    },
+    {
+        id: 'download',
+        label: 'Preparing download',
+        detail: 'Sending keepass-merged.kdbx to your browser and wiping the session.',
+    },
+];
 
-    const btn = document.getElementById('save-btn');
-    btn.disabled = true;
+class SaveProgress {
+    constructor() {
+        this.overlay = document.getElementById('save-modal');
+        this.title = document.getElementById('save-modal-title');
+        this.confirmPanel = document.getElementById('save-confirm-panel');
+        this.progressPanel = document.getElementById('save-progress-panel');
+        this.detail = document.getElementById('save-progress-detail');
+        this.list = document.getElementById('save-progress-steps');
+        this.footer = document.getElementById('save-modal-footer');
+        this.cancelBtn = document.getElementById('save-cancel-btn');
+        this.confirmBtn = document.getElementById('save-confirm-btn');
+        this.busy = false;
+    }
+
+    openConfirm() {
+        this.busy = false;
+        this.overlay.classList.remove('busy');
+        this.title.textContent = 'Download merged database?';
+        this.confirmPanel.hidden = false;
+        this.progressPanel.hidden = true;
+        this.progressPanel.setAttribute('aria-busy', 'false');
+        this.footer.hidden = false;
+        this.cancelBtn.disabled = false;
+        this.confirmBtn.disabled = false;
+        openDialog(this.overlay, this.confirmBtn);
+    }
+
+    startProgress() {
+        this.busy = true;
+        this.overlay.classList.add('busy');
+        this.title.textContent = 'Merging and downloading';
+        this.confirmPanel.hidden = true;
+        this.progressPanel.hidden = false;
+        this.progressPanel.setAttribute('aria-busy', 'true');
+        this.footer.hidden = true;
+        this.list.innerHTML = '';
+        this.detail.textContent = 'Starting…';
+
+        const dialog = this.overlay.querySelector('[role="dialog"]');
+        if (dialog) {
+            dialog.setAttribute('tabindex', '-1');
+            dialog.focus();
+        }
+
+        for (const step of SAVE_STEPS) {
+            const item = document.createElement('li');
+            item.className = 'progress-step pending';
+            item.dataset.step = step.id;
+            item.innerHTML =
+                '<span class="progress-step-icon" aria-hidden="true"></span>' +
+                '<span class="progress-step-text">' +
+                    '<span class="progress-step-label">' + step.label + '</span>' +
+                    '<span class="progress-step-hint">' + step.detail + '</span>' +
+                '</span>';
+            this.list.appendChild(item);
+        }
+    }
+
+    setStep(stepId, state, detailText) {
+        const item = this.list.querySelector('[data-step="' + stepId + '"]');
+        if (item) {
+            item.className = 'progress-step ' + state;
+        }
+        const step = SAVE_STEPS.find((s) => s.id === stepId);
+        if (detailText) {
+            this.detail.textContent = detailText;
+        } else if (step) {
+            this.detail.textContent = step.detail;
+        }
+    }
+
+    fail(stepId, message) {
+        if (stepId) this.setStep(stepId, 'error', message);
+        this.busy = false;
+        this.overlay.classList.remove('busy');
+        this.progressPanel.setAttribute('aria-busy', 'false');
+        this.footer.hidden = false;
+        this.cancelBtn.disabled = false;
+        this.confirmBtn.disabled = false;
+        this.confirmBtn.textContent = 'Try again';
+        this.title.textContent = 'Download failed';
+        this.confirmBtn.focus();
+    }
+
+    resetConfirmControls() {
+        this.confirmBtn.textContent = 'Download merged database';
+    }
+}
+
+const saveProgress = new SaveProgress();
+
+function closeSaveModal() {
+    if (saveProgress.busy) return;
+    closeDialog(document.getElementById('save-modal'));
+    saveProgress.resetConfirmControls();
+}
+
+function postSaveStep(step) {
+    return fetch('/api/save/process', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ step: step }),
+    }).then(async (resp) => {
+        const data = await resp.json().catch(() => ({}));
+        if (!resp.ok) {
+            const err = new Error(data.error || 'Save step failed');
+            err.data = data;
+            throw err;
+        }
+        return data;
+    });
+}
+
+async function runSavePipeline() {
+    saveProgress.startProgress();
+    saveProgress.setStep('cleanup', 'active');
 
     try {
-        const resp = await fetch('/api/save', { method: 'POST' });
+        const cleanup = await postSaveStep('cleanup');
+        saveProgress.setStep(
+            'cleanup',
+            'done',
+            'Cleaned ' + cleanup.cleaned_count + ' stale link' +
+                (cleanup.cleaned_count === 1 ? '' : 's') + '.',
+        );
+
+        saveProgress.setStep('apply', 'active');
+        const apply = await postSaveStep('apply');
+        saveProgress.setStep(
+            'apply',
+            'done',
+            'Updated ' + apply.updated_count + ' KeePass entr' +
+                (apply.updated_count === 1 ? 'y' : 'ies') + '.',
+        );
+
+        saveProgress.setStep('build', 'active');
+        await postSaveStep('build');
+        saveProgress.setStep('build', 'done', 'Merged database ready.');
+
+        saveProgress.setStep('download', 'active');
+        const resp = await fetch('/api/save/download', { method: 'POST' });
         if (!resp.ok) {
             const err = await resp.json().catch(() => ({}));
-            showToast(err.error || 'Save failed', 'error');
-            return;
+            throw new Error(err.error || 'Download failed');
         }
 
         const blob = await resp.blob();
@@ -475,34 +765,72 @@ document.getElementById('save-btn').addEventListener('click', async () => {
         a.remove();
         URL.revokeObjectURL(url);
 
-        const updated = resp.headers.get('X-Updated-Count') || '0';
-        const cleaned = resp.headers.get('X-Cleaned-Count') || '0';
-        const total = resp.headers.get('X-Total-Entries') || '0';
-        const otp = resp.headers.get('X-Otp-Entries') || '0';
-        showCompleteView({ total, otp, updated, cleaned });
+        saveProgress.setStep('download', 'done', 'Download started. Session wiped.');
+        saveProgress.busy = false;
+        saveProgress.overlay.classList.remove('busy');
+        closeDialog(document.getElementById('save-modal'));
+        saveProgress.resetConfirmControls();
+
+        showCompleteView({
+            total: resp.headers.get('X-Total-Entries') || '0',
+            otp: resp.headers.get('X-Otp-Entries') || '0',
+            updated: resp.headers.get('X-Updated-Count') || '0',
+            cleaned: resp.headers.get('X-Cleaned-Count') || '0',
+        });
     } catch (err) {
-        showToast('Save failed: ' + err.message, 'error');
-    } finally {
-        btn.disabled = false;
+        const active = saveProgress.list.querySelector('.progress-step.active');
+        const stepId = active ? active.dataset.step : 'download';
+        saveProgress.fail(stepId, err.message || 'Save failed');
+        showToast(err.message || 'Save failed', 'error');
     }
-});
+}
 
-document.getElementById('end-session-btn').addEventListener('click', async () => {
-    if (!confirm('End this session and wipe all data from memory?')) return;
+function openEndSessionModal() {
+    openDialog(
+        document.getElementById('end-session-modal'),
+        document.getElementById('end-session-confirm-btn'),
+    );
+}
 
+function closeEndSessionModal() {
+    closeDialog(document.getElementById('end-session-modal'));
+}
+
+async function endSessionAndLeave() {
     try {
         await fetch('/api/session/end', { method: 'POST' });
-    } catch (e) {}
+    } catch (e) { /* still leave */ }
     window.location.href = '/';
+}
+
+document.getElementById('save-btn').addEventListener('click', () => {
+    saveProgress.resetConfirmControls();
+    saveProgress.openConfirm();
 });
 
-document.getElementById('complete-end-session-btn').addEventListener('click', () => {
+document.getElementById('save-cancel-btn').addEventListener('click', closeSaveModal);
+document.getElementById('save-confirm-btn').addEventListener('click', () => {
+    runSavePipeline();
+});
+document.getElementById('save-modal').addEventListener('click', (e) => {
+    if (e.target.id === 'save-modal' && !saveProgress.busy) closeSaveModal();
+});
+
+document.getElementById('end-session-btn').addEventListener('click', openEndSessionModal);
+document.getElementById('end-session-cancel-btn').addEventListener('click', closeEndSessionModal);
+document.getElementById('end-session-confirm-btn').addEventListener('click', endSessionAndLeave);
+document.getElementById('end-session-modal').addEventListener('click', (e) => {
+    if (e.target.id === 'end-session-modal') closeEndSessionModal();
+});
+
+document.getElementById('complete-restart-btn').addEventListener('click', () => {
     window.location.href = '/';
 });
 
 document.getElementById('picker-modal').addEventListener('click', (e) => {
     if (e.target.id === 'picker-modal') closePicker();
 });
+document.getElementById('picker-cancel-btn').addEventListener('click', closePicker);
 
 document.getElementById('entries-body').addEventListener('click', (e) => {
     const aegisInfoBtn = e.target.closest('.info-aegis-btn');

@@ -4,6 +4,8 @@ ARG VERSION=dev
 LABEL org.opencontainers.image.source="https://github.com/wsj-br/aegis-keepass"
 LABEL org.opencontainers.image.version="${VERSION}"
 
+ENV PYTHONUNBUFFERED=1
+
 WORKDIR /app
 
 RUN addgroup -g 1000 app && \
@@ -16,6 +18,7 @@ RUN pip install --no-cache-dir -r requirements.txt
 COPY aegis_keepass_lib.py .
 COPY app/ app/
 COPY wsgi.py .
+COPY LICENSE NOTICES ./
 
 USER app
 

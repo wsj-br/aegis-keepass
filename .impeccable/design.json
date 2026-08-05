@@ -1,0 +1,1427 @@
+{
+  "schemaVersion": 2,
+  "generatedAt": "2026-08-05T22:00:40.338Z",
+  "title": "Design System: Aegis-KeePass OTP Sync",
+  "extensions": {
+    "colorMeta": {
+      "primary": {
+        "role": "primary",
+        "displayName": "Trust Blue",
+        "canonical": "#2563eb",
+        "tonalRamp": [
+          "#040075",
+          "#001398",
+          "#003abd",
+          "#1e5be1",
+          "#3e7cff",
+          "#5e9dff",
+          "#7ebfff",
+          "#9fe1ff"
+        ]
+      },
+      "primary-hover": {
+        "role": "primary",
+        "displayName": "Trust Blue Deep",
+        "canonical": "#1d4ed8",
+        "tonalRamp": [
+          "#080075",
+          "#010f99",
+          "#0d38be",
+          "#2659e2",
+          "#437bff",
+          "#629cff",
+          "#82beff",
+          "#a3e0ff"
+        ]
+      },
+      "primary-fg": {
+        "role": "primary",
+        "displayName": "Trust Blue Foreground",
+        "canonical": "#2563eb",
+        "tonalRamp": [
+          "#040075",
+          "#001398",
+          "#003abd",
+          "#1e5be1",
+          "#3e7cff",
+          "#5e9dff",
+          "#7ebfff",
+          "#9fe1ff"
+        ]
+      },
+      "primary-fg-hover": {
+        "role": "primary",
+        "displayName": "Trust Blue Foreground Hover",
+        "canonical": "#1d4ed8",
+        "tonalRamp": [
+          "#080075",
+          "#010f99",
+          "#0d38be",
+          "#2659e2",
+          "#437bff",
+          "#629cff",
+          "#82beff",
+          "#a3e0ff"
+        ]
+      },
+      "primary-soft": {
+        "role": "primary",
+        "displayName": "Ice Blue Soft",
+        "canonical": "#eff6ff",
+        "tonalRamp": [
+          "#181b1e",
+          "#303337",
+          "#4a4d51",
+          "#66696d",
+          "#83868b",
+          "#a1a5a9",
+          "#c1c4c9",
+          "#e1e5ea"
+        ]
+      },
+      "brand-indigo": {
+        "role": "primary",
+        "displayName": "Brand Indigo",
+        "canonical": "#6366f1",
+        "tonalRamp": [
+          "#19006e",
+          "#280492",
+          "#3b30b6",
+          "#5251da",
+          "#6d72f9",
+          "#8994ff",
+          "#a8b5ff",
+          "#c7d7ff"
+        ]
+      },
+      "success": {
+        "role": "primary",
+        "displayName": "Match Green",
+        "canonical": "#047857",
+        "tonalRamp": [
+          "#00270f",
+          "#004226",
+          "#005e3f",
+          "#107b5a",
+          "#3f9978",
+          "#62b896",
+          "#85d8b5",
+          "#a8f9d6"
+        ]
+      },
+      "success-fill": {
+        "role": "primary",
+        "displayName": "Match Green Fill",
+        "canonical": "#047857",
+        "tonalRamp": [
+          "#00270f",
+          "#004226",
+          "#005e3f",
+          "#107b5a",
+          "#3f9978",
+          "#62b896",
+          "#85d8b5",
+          "#a8f9d6"
+        ]
+      },
+      "success-bg": {
+        "role": "primary",
+        "displayName": "Match Green Soft",
+        "canonical": "#ecfdf5",
+        "tonalRamp": [
+          "#121d19",
+          "#2a3631",
+          "#43514a",
+          "#5e6d66",
+          "#7b8a83",
+          "#9aa9a2",
+          "#b9c8c1",
+          "#dae9e2"
+        ]
+      },
+      "danger": {
+        "role": "primary",
+        "displayName": "Risk Red",
+        "canonical": "#dc2626",
+        "tonalRamp": [
+          "#580000",
+          "#7c0000",
+          "#a20000",
+          "#c70010",
+          "#e93e38",
+          "#ff655a",
+          "#ff8a7b",
+          "#ffad9d"
+        ]
+      },
+      "danger-hover": {
+        "role": "primary",
+        "displayName": "Risk Red Deep",
+        "canonical": "#b91c1c",
+        "tonalRamp": [
+          "#520000",
+          "#750000",
+          "#9a0000",
+          "#be2422",
+          "#df4d43",
+          "#ff7063",
+          "#ff9384",
+          "#ffb5a5"
+        ]
+      },
+      "danger-fg": {
+        "role": "primary",
+        "displayName": "Risk Red Foreground",
+        "canonical": "#dc2626",
+        "tonalRamp": [
+          "#580000",
+          "#7c0000",
+          "#a20000",
+          "#c70010",
+          "#e93e38",
+          "#ff655a",
+          "#ff8a7b",
+          "#ffad9d"
+        ]
+      },
+      "danger-bg": {
+        "role": "primary",
+        "displayName": "Risk Red Soft",
+        "canonical": "#fef2f2",
+        "tonalRamp": [
+          "#1e1919",
+          "#363131",
+          "#514c4c",
+          "#6d6767",
+          "#8a8484",
+          "#a9a3a3",
+          "#c9c2c2",
+          "#e9e3e3"
+        ]
+      },
+      "warning": {
+        "role": "primary",
+        "displayName": "Caution Amber",
+        "canonical": "#d97706",
+        "tonalRamp": [
+          "#440000",
+          "#650a00",
+          "#862c00",
+          "#a84a00",
+          "#c76a00",
+          "#e88a36",
+          "#ffab5e",
+          "#ffcd82"
+        ]
+      },
+      "warning-bg": {
+        "role": "primary",
+        "displayName": "Caution Amber Soft",
+        "canonical": "#fffbeb",
+        "tonalRamp": [
+          "#1d1b10",
+          "#363327",
+          "#504d40",
+          "#6d695b",
+          "#8a8678",
+          "#a8a597",
+          "#c8c4b6",
+          "#e8e5d7"
+        ]
+      },
+      "on-warning": {
+        "role": "primary",
+        "displayName": "On Warning",
+        "canonical": "#1a1f2e",
+        "tonalRamp": [
+          "#151a28",
+          "#2d3242",
+          "#474d5d",
+          "#62687b",
+          "#7f8698",
+          "#9da4b7",
+          "#bdc4d6",
+          "#dde4f7"
+        ]
+      },
+      "bg": {
+        "role": "neutral",
+        "displayName": "Cool Paper",
+        "canonical": "#f4f6f9",
+        "tonalRamp": [
+          "#1a1b1c",
+          "#323334",
+          "#4c4d4e",
+          "#68696a",
+          "#858688",
+          "#a3a5a6",
+          "#c3c4c6",
+          "#e3e4e6"
+        ]
+      },
+      "surface": {
+        "role": "neutral",
+        "displayName": "Pure Surface",
+        "canonical": "#ffffff",
+        "tonalRamp": [
+          "#1b1b1b",
+          "#333333",
+          "#4d4d4d",
+          "#696969",
+          "#868686",
+          "#a4a4a4",
+          "#c4c4c4",
+          "#e4e4e4"
+        ]
+      },
+      "slate-panel": {
+        "role": "neutral",
+        "displayName": "Slate Panel",
+        "canonical": "#f8fafc",
+        "tonalRamp": [
+          "#1a1b1b",
+          "#323334",
+          "#4c4d4e",
+          "#68696a",
+          "#858687",
+          "#a4a5a6",
+          "#c3c4c5",
+          "#e3e5e6"
+        ]
+      },
+      "text": {
+        "role": "neutral",
+        "displayName": "Ink Navy",
+        "canonical": "#1a1f2e",
+        "tonalRamp": [
+          "#151a28",
+          "#2d3242",
+          "#474d5d",
+          "#62687b",
+          "#7f8698",
+          "#9da4b7",
+          "#bdc4d6",
+          "#dde4f7"
+        ]
+      },
+      "muted": {
+        "role": "neutral",
+        "displayName": "Slate Mute",
+        "canonical": "#5c6578",
+        "tonalRamp": [
+          "#141a29",
+          "#2b3343",
+          "#454d5f",
+          "#60697c",
+          "#7d869a",
+          "#9ba5b8",
+          "#bbc4d8",
+          "#dbe5f8"
+        ]
+      },
+      "border": {
+        "role": "neutral",
+        "displayName": "Hairline Border",
+        "canonical": "#dde3ed",
+        "tonalRamp": [
+          "#181b1f",
+          "#303337",
+          "#4a4d52",
+          "#66696e",
+          "#83868b",
+          "#a2a5aa",
+          "#c1c4ca",
+          "#e1e5ea"
+        ]
+      },
+      "secondary-btn": {
+        "role": "neutral",
+        "displayName": "Secondary Chip",
+        "canonical": "#eef2f7",
+        "tonalRamp": [
+          "#191b1d",
+          "#313335",
+          "#4b4d4f",
+          "#67696b",
+          "#848689",
+          "#a3a5a7",
+          "#c2c4c7",
+          "#e2e5e7"
+        ]
+      },
+      "secondary-btn-hover": {
+        "role": "neutral",
+        "displayName": "Secondary Chip Hover",
+        "canonical": "#e2e8f0",
+        "tonalRamp": [
+          "#181b1e",
+          "#303336",
+          "#4b4d51",
+          "#66696d",
+          "#83868a",
+          "#a2a5a9",
+          "#c1c4c9",
+          "#e1e5e9"
+        ]
+      },
+      "toast-ink": {
+        "role": "neutral",
+        "displayName": "Toast Ink",
+        "canonical": "#1e293b",
+        "tonalRamp": [
+          "#111b2a",
+          "#283345",
+          "#424e61",
+          "#5d6a7e",
+          "#7a879c",
+          "#98a5bb",
+          "#b8c5db",
+          "#d8e6fb"
+        ]
+      },
+      "on-accent": {
+        "role": "neutral",
+        "displayName": "On Accent",
+        "canonical": "#ffffff",
+        "tonalRamp": [
+          "#1b1b1b",
+          "#333333",
+          "#4d4d4d",
+          "#696969",
+          "#868686",
+          "#a4a4a4",
+          "#c4c4c4",
+          "#e4e4e4"
+        ]
+      },
+      "on-success": {
+        "role": "primary",
+        "displayName": "On Success",
+        "canonical": "#ffffff",
+        "tonalRamp": [
+          "#1b1b1b",
+          "#333333",
+          "#4d4d4d",
+          "#696969",
+          "#868686",
+          "#a4a4a4",
+          "#c4c4c4",
+          "#e4e4e4"
+        ]
+      },
+      "toast-success-bg": {
+        "role": "primary",
+        "displayName": "Toast Success Ground",
+        "canonical": "#047857",
+        "tonalRamp": [
+          "#00270f",
+          "#004226",
+          "#005e3f",
+          "#107b5a",
+          "#3f9978",
+          "#62b896",
+          "#85d8b5",
+          "#a8f9d6"
+        ]
+      },
+      "toast-success-fg": {
+        "role": "primary",
+        "displayName": "Toast Success Ink",
+        "canonical": "#ffffff",
+        "tonalRamp": [
+          "#1b1b1b",
+          "#333333",
+          "#4d4d4d",
+          "#696969",
+          "#868686",
+          "#a4a4a4",
+          "#c4c4c4",
+          "#e4e4e4"
+        ]
+      },
+      "toast-danger-bg": {
+        "role": "primary",
+        "displayName": "Toast Danger Ground",
+        "canonical": "#b91c1c",
+        "tonalRamp": [
+          "#520000",
+          "#750000",
+          "#9a0000",
+          "#be2422",
+          "#df4d43",
+          "#ff7063",
+          "#ff9384",
+          "#ffb5a5"
+        ]
+      },
+      "toast-danger-fg": {
+        "role": "primary",
+        "displayName": "Toast Danger Ink",
+        "canonical": "#ffffff",
+        "tonalRamp": [
+          "#1b1b1b",
+          "#333333",
+          "#4d4d4d",
+          "#696969",
+          "#868686",
+          "#a4a4a4",
+          "#c4c4c4",
+          "#e4e4e4"
+        ]
+      },
+      "empty-field": {
+        "role": "neutral",
+        "displayName": "Empty Field",
+        "canonical": "#5c6578",
+        "tonalRamp": [
+          "#141a29",
+          "#2b3343",
+          "#454d5f",
+          "#60697c",
+          "#7d869a",
+          "#9ba5b8",
+          "#bbc4d8",
+          "#dbe5f8"
+        ]
+      },
+      "table-stripe": {
+        "role": "neutral",
+        "displayName": "Table Stripe",
+        "canonical": "#fafbfd",
+        "tonalRamp": [
+          "#1a1b1b",
+          "#323334",
+          "#4d4d4e",
+          "#68696a",
+          "#868687",
+          "#a4a4a5",
+          "#c3c4c5",
+          "#e4e4e5"
+        ]
+      },
+      "conflict-border": {
+        "role": "primary",
+        "displayName": "Conflict Border",
+        "canonical": "#fcd34d",
+        "tonalRamp": [
+          "#321000",
+          "#4e2a00",
+          "#6b4600",
+          "#896300",
+          "#a78100",
+          "#c6a010",
+          "#e5c04a",
+          "#ffe172"
+        ]
+      },
+      "badge-matched-bg": {
+        "role": "primary",
+        "displayName": "Badge Matched Ground",
+        "canonical": "#bbf7d0",
+        "tonalRamp": [
+          "#00240a",
+          "#013e21",
+          "#225a3a",
+          "#3f7755",
+          "#5e9472",
+          "#7db391",
+          "#9ed3b0",
+          "#bff4d1"
+        ]
+      },
+      "badge-matched-fg": {
+        "role": "primary",
+        "displayName": "Badge Matched Ink",
+        "canonical": "#14532d",
+        "tonalRamp": [
+          "#002405",
+          "#003f1c",
+          "#1f5a35",
+          "#3d784f",
+          "#5c956d",
+          "#7bb48b",
+          "#9cd4ab",
+          "#bdf5cb"
+        ]
+      },
+      "badge-unmatched-bg": {
+        "role": "primary",
+        "displayName": "Badge Unmatched Ground",
+        "canonical": "#fecaca",
+        "tonalRamp": [
+          "#2f0e11",
+          "#4c2628",
+          "#694041",
+          "#885b5c",
+          "#a67979",
+          "#c59797",
+          "#e5b7b7",
+          "#ffd7d7"
+        ]
+      },
+      "badge-unmatched-fg": {
+        "role": "primary",
+        "displayName": "Badge Unmatched Ink",
+        "canonical": "#7f1d1d",
+        "tonalRamp": [
+          "#440000",
+          "#64030a",
+          "#862725",
+          "#a8443f",
+          "#c8645d",
+          "#e9847b",
+          "#ffa49b",
+          "#ffc6bc"
+        ]
+      },
+      "badge-modified-bg": {
+        "role": "primary",
+        "displayName": "Badge Modified Ground",
+        "canonical": "#fde68a",
+        "tonalRamp": [
+          "#2a1600",
+          "#443000",
+          "#604b00",
+          "#7d6700",
+          "#9a8529",
+          "#b9a44f",
+          "#d8c472",
+          "#f9e595"
+        ]
+      },
+      "badge-modified-fg": {
+        "role": "primary",
+        "displayName": "Badge Modified Ink",
+        "canonical": "#78350f",
+        "tonalRamp": [
+          "#3b0100",
+          "#5a1c00",
+          "#793714",
+          "#995331",
+          "#b97250",
+          "#d8916f",
+          "#f9b18f",
+          "#ffd2b0"
+        ]
+      },
+      "dark-bg": {
+        "role": "neutral",
+        "displayName": "Dark Desk Canvas",
+        "canonical": "#0f1419",
+        "tonalRamp": [
+          "#181b1e",
+          "#303336",
+          "#4a4d51",
+          "#66696d",
+          "#83878a",
+          "#a1a5a9",
+          "#c1c5c8",
+          "#e1e5e9"
+        ]
+      },
+      "dark-surface": {
+        "role": "neutral",
+        "displayName": "Dark Desk Surface",
+        "canonical": "#1a2332",
+        "tonalRamp": [
+          "#131b28",
+          "#2a3342",
+          "#444e5e",
+          "#5f6a7b",
+          "#7c8799",
+          "#9aa5b8",
+          "#bac5d7",
+          "#dae5f8"
+        ]
+      },
+      "dark-text": {
+        "role": "neutral",
+        "displayName": "Dark Desk Ink",
+        "canonical": "#e8edf5",
+        "tonalRamp": [
+          "#191b1e",
+          "#313336",
+          "#4b4d51",
+          "#67696d",
+          "#84868a",
+          "#a2a5a9",
+          "#c2c4c8",
+          "#e2e5e9"
+        ]
+      },
+      "dark-muted": {
+        "role": "neutral",
+        "displayName": "Dark Desk Mute",
+        "canonical": "#9aa6b8",
+        "tonalRamp": [
+          "#131b27",
+          "#2a3341",
+          "#444e5d",
+          "#5f6a7a",
+          "#7c8798",
+          "#9aa5b6",
+          "#bac5d6",
+          "#dae6f6"
+        ]
+      },
+      "dark-border": {
+        "role": "neutral",
+        "displayName": "Dark Desk Border",
+        "canonical": "#2d3a4d",
+        "tonalRamp": [
+          "#101b2b",
+          "#273345",
+          "#414e61",
+          "#5c6a7f",
+          "#79879d",
+          "#97a6bb",
+          "#b7c5db",
+          "#d7e6fb"
+        ]
+      },
+      "dark-primary": {
+        "role": "neutral",
+        "displayName": "Dark Trust Blue Fill",
+        "canonical": "#2563eb",
+        "tonalRamp": [
+          "#040075",
+          "#001398",
+          "#003abd",
+          "#1e5be1",
+          "#3e7cff",
+          "#5e9dff",
+          "#7ebfff",
+          "#9fe1ff"
+        ]
+      },
+      "dark-primary-hover": {
+        "role": "neutral",
+        "displayName": "Dark Trust Blue Deep",
+        "canonical": "#1d4ed8",
+        "tonalRamp": [
+          "#080075",
+          "#010f99",
+          "#0d38be",
+          "#2659e2",
+          "#437bff",
+          "#629cff",
+          "#82beff",
+          "#a3e0ff"
+        ]
+      },
+      "dark-primary-fg": {
+        "role": "neutral",
+        "displayName": "Dark Trust Blue Foreground",
+        "canonical": "#60a5fa",
+        "tonalRamp": [
+          "#001055",
+          "#002e75",
+          "#004b97",
+          "#2369b8",
+          "#4688d7",
+          "#67a7f7",
+          "#88c8ff",
+          "#aae9ff"
+        ]
+      },
+      "dark-primary-fg-hover": {
+        "role": "neutral",
+        "displayName": "Dark Trust Blue Foreground Hover",
+        "canonical": "#93c5fd",
+        "tonalRamp": [
+          "#001941",
+          "#04335f",
+          "#214f7e",
+          "#3d6c9e",
+          "#5c8abc",
+          "#7ba8dc",
+          "#9bc8fc",
+          "#bce9ff"
+        ]
+      },
+      "dark-primary-soft": {
+        "role": "neutral",
+        "displayName": "Dark Ice Blue Soft",
+        "canonical": "#1e3a5f",
+        "tonalRamp": [
+          "#031a39",
+          "#193356",
+          "#324e74",
+          "#4d6b93",
+          "#6a88b1",
+          "#88a7d0",
+          "#a8c7f0",
+          "#c9e7ff"
+        ]
+      },
+      "dark-success": {
+        "role": "neutral",
+        "displayName": "Dark Match Green",
+        "canonical": "#34d399",
+        "tonalRamp": [
+          "#002b03",
+          "#00471b",
+          "#006434",
+          "#00824f",
+          "#00a16c",
+          "#2bc08b",
+          "#5de0aa",
+          "#85ffcb"
+        ]
+      },
+      "dark-success-fill": {
+        "role": "neutral",
+        "displayName": "Dark Match Green Fill",
+        "canonical": "#047857",
+        "tonalRamp": [
+          "#00270f",
+          "#004226",
+          "#005e3f",
+          "#107b5a",
+          "#3f9978",
+          "#62b896",
+          "#85d8b5",
+          "#a8f9d6"
+        ]
+      },
+      "dark-danger": {
+        "role": "neutral",
+        "displayName": "Dark Risk Red Fill",
+        "canonical": "#dc2626",
+        "tonalRamp": [
+          "#580000",
+          "#7c0000",
+          "#a20000",
+          "#c70010",
+          "#e93e38",
+          "#ff655a",
+          "#ff8a7b",
+          "#ffad9d"
+        ]
+      },
+      "dark-danger-fg": {
+        "role": "neutral",
+        "displayName": "Dark Risk Red Foreground",
+        "canonical": "#f87171",
+        "tonalRamp": [
+          "#4c0000",
+          "#6e0004",
+          "#910b20",
+          "#b5333a",
+          "#d65658",
+          "#f77877",
+          "#ff9997",
+          "#ffbcb8"
+        ]
+      },
+      "dark-warning": {
+        "role": "neutral",
+        "displayName": "Dark Caution Amber",
+        "canonical": "#fbbf24",
+        "tonalRamp": [
+          "#390600",
+          "#562300",
+          "#743f00",
+          "#945c00",
+          "#b27b00",
+          "#d19b00",
+          "#f1bb3b",
+          "#ffdc67"
+        ]
+      },
+      "dark-on-warning": {
+        "role": "neutral",
+        "displayName": "Dark On Warning",
+        "canonical": "#1a1f2e",
+        "tonalRamp": [
+          "#151a28",
+          "#2d3242",
+          "#474d5d",
+          "#62687b",
+          "#7f8698",
+          "#9da4b7",
+          "#bdc4d6",
+          "#dde4f7"
+        ]
+      },
+      "dark-toast-success-bg": {
+        "role": "neutral",
+        "displayName": "Dark Toast Success Ground",
+        "canonical": "#34d399",
+        "tonalRamp": [
+          "#002b03",
+          "#00471b",
+          "#006434",
+          "#00824f",
+          "#00a16c",
+          "#2bc08b",
+          "#5de0aa",
+          "#85ffcb"
+        ]
+      },
+      "dark-toast-success-fg": {
+        "role": "neutral",
+        "displayName": "Dark Toast Success Ink",
+        "canonical": "#052e1c",
+        "tonalRamp": [
+          "#002212",
+          "#173b29",
+          "#315642",
+          "#4c735e",
+          "#6a917b",
+          "#89af99",
+          "#a9cfb9",
+          "#c9efd9"
+        ]
+      },
+      "dark-toast-danger-bg": {
+        "role": "neutral",
+        "displayName": "Dark Toast Danger Ground",
+        "canonical": "#f87171",
+        "tonalRamp": [
+          "#4c0000",
+          "#6e0004",
+          "#910b20",
+          "#b5333a",
+          "#d65658",
+          "#f77877",
+          "#ff9997",
+          "#ffbcb8"
+        ]
+      },
+      "dark-toast-danger-fg": {
+        "role": "neutral",
+        "displayName": "Dark Toast Danger Ink",
+        "canonical": "#1a0505",
+        "tonalRamp": [
+          "#291313",
+          "#442b2a",
+          "#614543",
+          "#7e605e",
+          "#9c7e7b",
+          "#bb9c9a",
+          "#dbbcb9",
+          "#fbdcda"
+        ]
+      },
+      "dark-empty-field": {
+        "role": "neutral",
+        "displayName": "Dark Empty Field",
+        "canonical": "#9aa6b8",
+        "tonalRamp": [
+          "#131b27",
+          "#2a3341",
+          "#444e5d",
+          "#5f6a7a",
+          "#7c8798",
+          "#9aa5b6",
+          "#bac5d6",
+          "#dae6f6"
+        ]
+      },
+      "dark-slate-panel": {
+        "role": "neutral",
+        "displayName": "Dark Slate Panel",
+        "canonical": "#151d2a",
+        "tonalRamp": [
+          "#131b27",
+          "#2b3341",
+          "#444e5c",
+          "#606a79",
+          "#7d8797",
+          "#9ba5b6",
+          "#bbc5d5",
+          "#dbe5f6"
+        ]
+      },
+      "dark-brand-indigo": {
+        "role": "neutral",
+        "displayName": "Dark Brand Indigo",
+        "canonical": "#818cf8",
+        "tonalRamp": [
+          "#14005c",
+          "#261f7d",
+          "#3c3d9f",
+          "#555bc1",
+          "#707ae0",
+          "#8e9aff",
+          "#adbaff",
+          "#cddcff"
+        ]
+      },
+      "dark-table-stripe": {
+        "role": "neutral",
+        "displayName": "Dark Table Stripe",
+        "canonical": "#161e2c",
+        "tonalRamp": [
+          "#131b27",
+          "#2b3341",
+          "#444d5d",
+          "#60697a",
+          "#7d8798",
+          "#9ba5b7",
+          "#bac5d6",
+          "#dbe5f7"
+        ]
+      },
+      "dark-conflict-border": {
+        "role": "neutral",
+        "displayName": "Dark Conflict Border",
+        "canonical": "#a16207",
+        "tonalRamp": [
+          "#390400",
+          "#572100",
+          "#763c00",
+          "#965800",
+          "#b5762d",
+          "#d49652",
+          "#f5b674",
+          "#ffd797"
+        ]
+      },
+      "dark-toast-ink": {
+        "role": "neutral",
+        "displayName": "Dark Toast Ink",
+        "canonical": "#0b1220",
+        "tonalRamp": [
+          "#141a28",
+          "#2b3342",
+          "#454d5e",
+          "#60697b",
+          "#7d8699",
+          "#9ba5b7",
+          "#bbc4d7",
+          "#dbe5f8"
+        ]
+      },
+      "dark-secondary-btn": {
+        "role": "neutral",
+        "displayName": "Dark Secondary Chip",
+        "canonical": "#243044",
+        "tonalRamp": [
+          "#101b2c",
+          "#283346",
+          "#414e63",
+          "#5c6a80",
+          "#79879e",
+          "#97a5bd",
+          "#b7c5dc",
+          "#d7e6fd"
+        ]
+      },
+      "dark-secondary-btn-hover": {
+        "role": "neutral",
+        "displayName": "Dark Secondary Chip Hover",
+        "canonical": "#2e3d55",
+        "tonalRamp": [
+          "#0e1b2e",
+          "#253349",
+          "#3e4e66",
+          "#596a84",
+          "#7687a2",
+          "#95a6c1",
+          "#b4c5e0",
+          "#d5e6ff"
+        ]
+      },
+      "dark-badge-matched-bg": {
+        "role": "neutral",
+        "displayName": "Dark Badge Matched Ground",
+        "canonical": "#14532d",
+        "tonalRamp": [
+          "#002405",
+          "#003f1c",
+          "#1f5a35",
+          "#3d784f",
+          "#5c956d",
+          "#7bb48b",
+          "#9cd4ab",
+          "#bdf5cb"
+        ]
+      },
+      "dark-badge-matched-fg": {
+        "role": "neutral",
+        "displayName": "Dark Badge Matched Ink",
+        "canonical": "#bbf7d0",
+        "tonalRamp": [
+          "#00240a",
+          "#013e21",
+          "#225a3a",
+          "#3f7755",
+          "#5e9472",
+          "#7db391",
+          "#9ed3b0",
+          "#bff4d1"
+        ]
+      },
+      "dark-badge-unmatched-bg": {
+        "role": "neutral",
+        "displayName": "Dark Badge Unmatched Ground",
+        "canonical": "#7f1d1d",
+        "tonalRamp": [
+          "#440000",
+          "#64030a",
+          "#862725",
+          "#a8443f",
+          "#c8645d",
+          "#e9847b",
+          "#ffa49b",
+          "#ffc6bc"
+        ]
+      },
+      "dark-badge-unmatched-fg": {
+        "role": "neutral",
+        "displayName": "Dark Badge Unmatched Ink",
+        "canonical": "#fecaca",
+        "tonalRamp": [
+          "#2f0e11",
+          "#4c2628",
+          "#694041",
+          "#885b5c",
+          "#a67979",
+          "#c59797",
+          "#e5b7b7",
+          "#ffd7d7"
+        ]
+      },
+      "dark-badge-modified-bg": {
+        "role": "neutral",
+        "displayName": "Dark Badge Modified Ground",
+        "canonical": "#78350f",
+        "tonalRamp": [
+          "#3b0100",
+          "#5a1c00",
+          "#793714",
+          "#995331",
+          "#b97250",
+          "#d8916f",
+          "#f9b18f",
+          "#ffd2b0"
+        ]
+      },
+      "dark-badge-modified-fg": {
+        "role": "neutral",
+        "displayName": "Dark Badge Modified Ink",
+        "canonical": "#fde68a",
+        "tonalRamp": [
+          "#2a1600",
+          "#443000",
+          "#604b00",
+          "#7d6700",
+          "#9a8529",
+          "#b9a44f",
+          "#d8c472",
+          "#f9e595"
+        ]
+      }
+    },
+    "typographyMeta": {
+      "brand": {
+        "displayName": "Brand",
+        "purpose": "Product name in the site header."
+      },
+      "complete": {
+        "displayName": "Complete",
+        "purpose": "Download-complete heading."
+      },
+      "modal-title": {
+        "displayName": "Modal Title",
+        "purpose": "Dialog titles in picker/conflict/info/save/end-session modals."
+      },
+      "title": {
+        "displayName": "Title",
+        "purpose": "Section heads on cards."
+      },
+      "body": {
+        "displayName": "Body",
+        "purpose": "Default reading text for forms, table cells, and modal bodies."
+      },
+      "control": {
+        "displayName": "Control",
+        "purpose": "Button and drop-zone titles."
+      },
+      "input": {
+        "displayName": "Input",
+        "purpose": "Field and search input text."
+      },
+      "label": {
+        "displayName": "Label",
+        "purpose": "Field labels, step text, and control labels."
+      },
+      "hint": {
+        "displayName": "Hint",
+        "purpose": "Supporting muted helper lines under controls."
+      },
+      "compact": {
+        "displayName": "Compact",
+        "purpose": "Small button labels in dense toolbars."
+      },
+      "micro": {
+        "displayName": "Micro",
+        "purpose": "Uppercase tracked metadata for table headers and stat chips."
+      },
+      "badge": {
+        "displayName": "Badge",
+        "purpose": "Status pill labels in the review table."
+      },
+      "tiny": {
+        "displayName": "Tiny",
+        "purpose": "OTP/linked micro-badges and densest metadata."
+      }
+    },
+    "shadows": [
+      {
+        "name": "surface-lift",
+        "value": "0 1px 3px rgba(15, 23, 42, 0.08), 0 8px 24px rgba(15, 23, 42, 0.06)",
+        "purpose": "Shared elevation for cards, modals, and toasts (light). Dark uses a deeper --shadow pair."
+      },
+      {
+        "name": "header-hair",
+        "value": "0 1px 0 rgba(15, 23, 42, 0.04)",
+        "purpose": "Subtle under-edge on the site header."
+      },
+      {
+        "name": "focus-ring-soft",
+        "value": "outline: 2px solid rgba(37, 99, 235, 0.25)",
+        "purpose": "Input/control focus (light); dark uses a stronger alpha via --focus-ring."
+      },
+      {
+        "name": "progress-active-ring",
+        "value": "0 0 0 2px rgba(37, 99, 235, 0.12)",
+        "purpose": "Active progress step highlight (upload and save modal)."
+      },
+      {
+        "name": "modal-scrim",
+        "value": "rgba(15, 23, 42, 0.45)",
+        "purpose": "Fixed overlay behind dialogs (light); dark uses a deeper scrim."
+      }
+    ],
+    "motion": [
+      {
+        "name": "motion-fast",
+        "value": "0.15s",
+        "purpose": "Control, drop-zone, filter, and toast feedback transitions."
+      },
+      {
+        "name": "motion-step",
+        "value": "0.2s",
+        "purpose": "Progress-step opacity/border/box-shadow state changes (upload and save modal)."
+      },
+      {
+        "name": "ease-out",
+        "value": "cubic-bezier(0.16, 1, 0.3, 1)",
+        "purpose": "Toast arrival easing."
+      },
+      {
+        "name": "progress-spin",
+        "value": "0.8s linear infinite",
+        "purpose": "Active progress ring (upload and save); disabled under prefers-reduced-motion."
+      }
+    ],
+    "breakpoints": [
+      {
+        "name": "header-wrap",
+        "value": "900px",
+        "purpose": "Header steps wrap; review toolbar stacks; search/actions go full-width."
+      },
+      {
+        "name": "drop-grid",
+        "value": "640px",
+        "purpose": "Upload drop grid collapses to one column; tighter card padding; edge toasts."
+      },
+      {
+        "name": "touch-coarse",
+        "value": "pointer: coarse",
+        "purpose": "44px minimum hit targets and 1rem form text on touch/stylus pointers."
+      }
+    ]
+  },
+  "components": [
+    {
+      "name": "Primary Button",
+      "kind": "button",
+      "refersTo": "button-primary",
+      "description": "Decisive session actions: continue to review, download merged database.",
+      "html": "<button class=\"ds-btn-primary\" type=\"button\">Continue to review</button>",
+      "css": ".ds-btn-primary { padding: 10px 18px; min-height: 40px; border: none; border-radius: 8px; cursor: pointer; font-size: 0.9rem; font-weight: 600; font-family: \"Segoe UI\", system-ui, -apple-system, sans-serif; background: #2563eb; color: #ffffff; transition: background 0.15s, opacity 0.15s; } .ds-btn-primary:hover:not(:disabled) { background: #1d4ed8; } .ds-btn-primary:disabled { opacity: 0.55; cursor: not-allowed; } .ds-btn-primary:focus-visible { outline: 2px solid rgba(37, 99, 235, 0.25); outline-offset: 2px; }"
+    },
+    {
+      "name": "Secondary Button",
+      "kind": "button",
+      "refersTo": "button-secondary",
+      "description": "Quiet actions: end session, cancel, choose optional keyfile.",
+      "html": "<button class=\"ds-btn-secondary\" type=\"button\">End session</button>",
+      "css": ".ds-btn-secondary { padding: 10px 18px; min-height: 40px; border: none; border-radius: 8px; cursor: pointer; font-size: 0.9rem; font-weight: 600; font-family: \"Segoe UI\", system-ui, -apple-system, sans-serif; background: #eef2f7; color: #1a1f2e; transition: background 0.15s, opacity 0.15s; } .ds-btn-secondary:hover:not(:disabled) { background: #e2e8f0; } .ds-btn-secondary:focus-visible { outline: 2px solid rgba(37, 99, 235, 0.25); outline-offset: 2px; }"
+    },
+    {
+      "name": "Danger Button",
+      "kind": "button",
+      "refersTo": "button-danger",
+      "description": "Irreversible confirmations such as reassigning a KeePass link.",
+      "html": "<button class=\"ds-btn-danger\" type=\"button\">Reassign anyway</button>",
+      "css": ".ds-btn-danger { padding: 10px 18px; min-height: 40px; border: none; border-radius: 8px; cursor: pointer; font-size: 0.9rem; font-weight: 600; font-family: \"Segoe UI\", system-ui, -apple-system, sans-serif; background: #dc2626; color: #ffffff; transition: background 0.15s, opacity 0.15s; } .ds-btn-danger:hover:not(:disabled) { background: #b91c1c; } .ds-btn-danger:focus-visible { outline: 2px solid rgba(220, 38, 38, 0.35); outline-offset: 2px; }"
+    },
+    {
+      "name": "Text Input",
+      "kind": "input",
+      "refersTo": "input",
+      "description": "Password and search fields with soft blue focus ring; aria-invalid uses Risk Red border and danger focus.",
+      "html": "<label class=\"ds-field\"><span class=\"ds-field-label\">Aegis backup password</span><input class=\"ds-input\" type=\"password\" placeholder=\"Password for your Aegis backup\" aria-invalid=\"true\" /></label>",
+      "css": ".ds-field { display: block; margin-bottom: 16px; font-family: \"Segoe UI\", system-ui, -apple-system, sans-serif; } .ds-field-label { display: block; font-weight: 600; font-size: 0.875rem; margin-bottom: 6px; color: #1a1f2e; } .ds-input { width: 100%; box-sizing: border-box; padding: 10px 14px; border: 1px solid #dde3ed; border-radius: 8px; font-size: 0.95rem; background: #ffffff; color: #1a1f2e; font-family: inherit; } .ds-input::placeholder { color: #5c6578; opacity: 1; } .ds-input:focus { outline: 2px solid rgba(37, 99, 235, 0.25); border-color: #2563eb; } .ds-input[aria-invalid=\"true\"] { border-color: #dc2626; } .ds-input[aria-invalid=\"true\"]:focus { outline-color: #dc2626; border-color: #dc2626; }"
+    },
+    {
+      "name": "Work Card",
+      "kind": "card",
+      "refersTo": "card",
+      "description": "Primary work surface for upload, toolbar, table, and completion.",
+      "html": "<section class=\"ds-card\"><div class=\"ds-card-header\"><h2>Upload your files</h2><p>Provide your encrypted Aegis backup and KeePass database.</p></div></section>",
+      "css": ".ds-card { background: #ffffff; border: 1px solid #dde3ed; border-radius: 12px; box-shadow: 0 1px 3px rgba(15, 23, 42, 0.08), 0 8px 24px rgba(15, 23, 42, 0.06); font-family: \"Segoe UI\", system-ui, -apple-system, sans-serif; color: #1a1f2e; max-width: 760px; } .ds-card-header { padding: 24px 28px 0; } .ds-card-header h2 { margin: 0 0 8px; font-size: 1.35rem; font-weight: 700; line-height: 1.3; } .ds-card-header p { margin: 0 0 16px; color: #5c6578; line-height: 1.5; max-width: 65ch; }"
+    },
+    {
+      "name": "Brand Mark",
+      "kind": "custom",
+      "refersTo": "brand-mark",
+      "description": "AK vault-shield identity beside the product name (PNG in app; gradient stand-in for the panel).",
+      "html": "<div class=\"ds-brand\"><div class=\"ds-brand-mark\" aria-hidden=\"true\">AK</div><div><div class=\"ds-brand-title\">Aegis-KeePass OTP Sync</div><div class=\"ds-brand-sub\">Import OTP secrets · Match entries · Merge into KeePass</div></div></div>",
+      "css": ".ds-brand { display: flex; align-items: center; gap: 14px; font-family: \"Segoe UI\", system-ui, -apple-system, sans-serif; } .ds-brand-mark { width: 44px; height: 44px; border-radius: 10px; background: linear-gradient(135deg, #2563eb, #6366f1); color: #ffffff; display: flex; align-items: center; justify-content: center; font-weight: 700; font-size: 0.85rem; } .ds-brand-title { margin: 0; font-size: 1.25rem; font-weight: 700; color: #1a1f2e; line-height: 1.3; } .ds-brand-sub { margin: 2px 0 0; color: #5c6578; font-size: 0.875rem; }"
+    },
+    {
+      "name": "Drop Zone",
+      "kind": "custom",
+      "refersTo": "drop-zone",
+      "description": "Dashed upload target with keyboard-focusable visually hidden file input; aria-invalid uses Risk Red border and danger-soft fill.",
+      "html": "<label class=\"ds-drop\"><input class=\"ds-file\" type=\"file\" /><div class=\"ds-drop-title\">Aegis backup</div><div class=\"ds-drop-hint\">Encrypted JSON export</div><div class=\"ds-drop-file\">Drop file or click to browse</div></label>",
+      "css": ".ds-drop { position: relative; display: block; border: 2px dashed #dde3ed; border-radius: 8px; padding: 28px 16px; text-align: center; cursor: pointer; transition: border-color 0.15s, background 0.15s; font-family: \"Segoe UI\", system-ui, -apple-system, sans-serif; background: #ffffff; color: #1a1f2e; } .ds-file { position: absolute; width: 1px; height: 1px; padding: 0; margin: -1px; overflow: hidden; clip: rect(0,0,0,0); white-space: nowrap; border: 0; } .ds-drop:hover, .ds-drop:focus-within { border-color: #2563eb; background: #eff6ff; } .ds-drop:focus-within { outline: 2px solid rgba(37, 99, 235, 0.25); outline-offset: 2px; } .ds-drop:has(.ds-file[aria-invalid=\"true\"]) { border-color: #dc2626; background: #fef2f2; } .ds-drop-title { font-weight: 600; font-size: 0.9rem; margin-bottom: 4px; } .ds-drop-hint { font-size: 0.8rem; color: #5c6578; margin-bottom: 10px; line-height: 1.35; } .ds-drop-file { font-size: 0.875rem; color: #2563eb; word-break: break-all; } .ds-drop.is-filled { border-color: #047857; background: #ecfdf5; }"
+    },
+    {
+      "name": "Filter Chip",
+      "kind": "chip",
+      "refersTo": "filter-btn",
+      "description": "Review toolbar status filter with aria-pressed; active fills Trust Blue; active focus uses a white ring on the blue fill.",
+      "html": "<div class=\"ds-filters\" role=\"group\" aria-label=\"Filter entries\"><button class=\"ds-filter\" type=\"button\" aria-pressed=\"false\">All</button><button class=\"ds-filter ds-filter-active\" type=\"button\" aria-pressed=\"true\">Matched</button><button class=\"ds-filter\" type=\"button\" aria-pressed=\"false\">Unmatched</button></div>",
+      "css": ".ds-filters { display: flex; gap: 4px; flex-wrap: wrap; font-family: \"Segoe UI\", system-ui, -apple-system, sans-serif; } .ds-filter { padding: 7px 14px; min-height: 36px; border: 1px solid #dde3ed; background: #ffffff; border-radius: 8px; cursor: pointer; font-size: 0.875rem; font-weight: 600; color: #1a1f2e; transition: background 0.15s, border-color 0.15s, color 0.15s; } .ds-filter:hover:not(.ds-filter-active) { background: #f8fafc; } .ds-filter:focus-visible { outline: 2px solid rgba(37, 99, 235, 0.25); outline-offset: 2px; } .ds-filter-active { background: #2563eb; color: #ffffff; border-color: #2563eb; } .ds-filter-active:focus-visible { outline-color: #ffffff; box-shadow: 0 0 0 2px #2563eb; }"
+    },
+    {
+      "name": "Theme Toggle",
+      "kind": "nav",
+      "refersTo": "theme-toggle",
+      "description": "Header control cycling System → Light → Dark with mode label.",
+      "html": "<button class=\"ds-theme\" type=\"button\" aria-label=\"Color theme: System. Click to change.\"><svg class=\"ds-theme-icon\" xmlns=\"http://www.w3.org/2000/svg\" viewBox=\"0 0 24 24\" fill=\"none\" stroke=\"currentColor\" stroke-width=\"1.75\" aria-hidden=\"true\"><circle cx=\"12\" cy=\"12\" r=\"9\"></circle><path d=\"M12 3a9 9 0 0 0 0 18Z\" fill=\"currentColor\"></path></svg><span>System</span></button>",
+      "css": ".ds-theme { display: inline-flex; align-items: center; gap: 8px; min-height: 40px; padding: 8px 12px; border: 1px solid #dde3ed; border-radius: 8px; background: #f8fafc; color: #1a1f2e; cursor: pointer; font-family: \"Segoe UI\", system-ui, -apple-system, sans-serif; font-size: 0.875rem; font-weight: 600; transition: background 0.15s, border-color 0.15s, color 0.15s; } .ds-theme:hover { background: #e2e8f0; border-color: #2563eb; } .ds-theme:focus-visible { outline: 2px solid rgba(37, 99, 235, 0.25); outline-offset: 2px; } .ds-theme-icon { width: 18px; height: 18px; display: block; }"
+    },
+    {
+      "name": "Modal",
+      "kind": "custom",
+      "refersTo": "modal",
+      "description": "Elevated dialog with Escape dismiss (blocked while save is busy), focus trap, and closed overlays kept aria-hidden=\"true\" (picker / conflict / info / save / end-session). Save and end-session use in-app confirms (never window.confirm); save confirm transitions into the shared progress step list.",
+      "html": "<div class=\"ds-modal-root\" aria-hidden=\"false\"><div class=\"ds-modal\" role=\"dialog\" aria-modal=\"true\" aria-labelledby=\"ds-modal-title\"><div class=\"ds-modal-header\"><h2 id=\"ds-modal-title\">Save and download</h2></div><div class=\"ds-modal-body\"><p class=\"ds-modal-meta\">Apply matched OTP secrets and download the updated KeePass database.</p><ol class=\"ds-progress\"><li class=\"ds-step ds-step-done\"><span class=\"ds-step-icon\" aria-hidden=\"true\"></span><span>Cleanup</span></li><li class=\"ds-step ds-step-active\"><span class=\"ds-step-icon\" aria-hidden=\"true\"></span><span>Apply OTP</span></li><li class=\"ds-step\"><span class=\"ds-step-icon\" aria-hidden=\"true\"></span><span>Build database</span></li><li class=\"ds-step\"><span class=\"ds-step-icon\" aria-hidden=\"true\"></span><span>Download</span></li></ol></div><div class=\"ds-modal-footer\"><button class=\"ds-btn-secondary\" type=\"button\">Cancel</button> <button class=\"ds-btn-primary\" type=\"button\">Save and download</button></div></div></div>",
+      "css": ".ds-modal-root[aria-hidden=\"true\"] { display: none; } .ds-modal { background: #ffffff; border-radius: 12px; width: 100%; max-width: 620px; max-height: 85vh; display: flex; flex-direction: column; box-shadow: 0 1px 3px rgba(15, 23, 42, 0.08), 0 8px 24px rgba(15, 23, 42, 0.06); font-family: \"Segoe UI\", system-ui, -apple-system, sans-serif; color: #1a1f2e; } .ds-modal-header { padding: 18px 22px; border-bottom: 1px solid #dde3ed; } .ds-modal-header h2 { margin: 0; font-size: 1.1rem; font-weight: 700; line-height: 1.3; } .ds-modal-body { padding: 12px 22px; overflow-y: auto; flex: 1; } .ds-modal-meta { margin: 0 0 12px; color: #5c6578; font-size: 0.875rem; } .ds-modal-footer { padding: 12px 22px; border-top: 1px solid #dde3ed; text-align: right; display: flex; gap: 8px; justify-content: flex-end; } .ds-btn-primary { padding: 10px 18px; border: none; border-radius: 8px; cursor: pointer; font-size: 0.9rem; font-weight: 600; background: #2563eb; color: #ffffff; } .ds-btn-primary:hover { background: #1d4ed8; } .ds-btn-primary:focus-visible { outline: 2px solid rgba(37, 99, 235, 0.25); outline-offset: 2px; } .ds-btn-secondary { padding: 10px 18px; border: none; border-radius: 8px; cursor: pointer; font-size: 0.9rem; font-weight: 600; background: #eef2f7; color: #1a1f2e; } .ds-btn-secondary:hover { background: #e2e8f0; } .ds-btn-secondary:focus-visible { outline: 2px solid rgba(37, 99, 235, 0.25); outline-offset: 2px; } .ds-progress { list-style: none; margin: 0; padding: 0; display: flex; flex-direction: column; gap: 8px; } .ds-step { display: flex; align-items: flex-start; gap: 10px; padding: 10px 12px; border: 1px solid #dde3ed; border-radius: 8px; background: #f8fafc; opacity: 0.65; font-size: 0.9rem; font-weight: 600; } .ds-step-active, .ds-step-done { opacity: 1; } .ds-step-active { border-color: #2563eb; box-shadow: 0 0 0 2px rgba(37, 99, 235, 0.12); } .ds-step-icon { flex-shrink: 0; width: 1.25rem; height: 1.25rem; margin-top: 2px; border-radius: 50%; border: 2px solid #dde3ed; background: #ffffff; position: relative; } .ds-step-active .ds-step-icon { border-color: #2563eb; border-top-color: transparent; animation: ds-spin 0.8s linear infinite; } .ds-step-done .ds-step-icon { border-color: #047857; background: #047857; } .ds-step-done .ds-step-icon::after { content: \"\"; position: absolute; left: 4px; top: 1px; width: 5px; height: 9px; border: solid #ffffff; border-width: 0 2px 2px 0; transform: rotate(45deg); } @keyframes ds-spin { to { transform: rotate(360deg); } } @media (prefers-reduced-motion: reduce) { .ds-step-active .ds-step-icon { animation: none; border-color: #2563eb; background: #eff6ff; } }"
+    },
+    {
+      "name": "Review Table",
+      "kind": "custom",
+      "refersTo": "review-table",
+      "description": "Sticky slate/surface header band in a max-height min(70vh, 720px) scrollport; status pills and amber OTP micro-badge in rows.",
+      "html": "<div class=\"ds-table-wrap\"><table class=\"ds-table\"><caption class=\"ds-sr\">Match review</caption><thead><tr><th>Issuer</th><th>Status</th><th>KeePass</th></tr></thead><tbody><tr class=\"ds-row-matched\"><td>Example</td><td><span class=\"ds-badge ds-badge-matched\">Matched</span> <span class=\"ds-otp\">OTP</span></td><td>Vault / Example</td></tr><tr class=\"ds-row-modified\"><td>Other</td><td><span class=\"ds-badge ds-badge-modified\">Modified</span></td><td>Vault / Other</td></tr></tbody></table></div>",
+      "css": ".ds-table-wrap { max-height: min(70vh, 720px); overflow: auto; border: 1px solid #dde3ed; border-radius: 12px; background: #ffffff; font-family: \"Segoe UI\", system-ui, -apple-system, sans-serif; color: #1a1f2e; } .ds-sr { position: absolute; width: 1px; height: 1px; padding: 0; margin: -1px; overflow: hidden; clip: rect(0,0,0,0); white-space: nowrap; border: 0; } .ds-table { width: 100%; border-collapse: collapse; font-size: 0.875rem; } .ds-table th { position: sticky; top: 0; z-index: 1; background: #f8fafc; color: #5c6578; text-align: left; padding: 10px 12px; font-size: 0.78rem; font-weight: 700; letter-spacing: 0.04em; text-transform: uppercase; border-bottom: 1px solid #dde3ed; } .ds-table td { padding: 10px 12px; border-bottom: 1px solid #dde3ed; overflow-wrap: anywhere; } .ds-table tbody tr:nth-child(even) { background: #fafbfd; } .ds-row-matched { background: #ecfdf5; } .ds-row-modified td:first-child { box-shadow: inset 3px 0 0 #d97706; } .ds-badge { display: inline-block; padding: 3px 10px; border-radius: 999px; font-size: 0.75rem; font-weight: 600; } .ds-badge-matched { background: #bbf7d0; color: #14532d; } .ds-badge-modified { background: #fde68a; color: #78350f; } .ds-otp { display: inline-block; background: #d97706; color: #1a1f2e; padding: 1px 6px; border-radius: 4px; font-size: 0.72rem; font-weight: 700; letter-spacing: 0.02em; }"
+    },
+    {
+      "name": "Toast",
+      "kind": "custom",
+      "refersTo": "toast",
+      "description": "Shared toast.js helper; fixed bottom-right Surface Lift panel with default Toast Ink or dedicated success/danger pairs.",
+      "html": "<div class=\"ds-toast ds-toast-success\" role=\"status\">OTP applied to 3 entries</div>",
+      "css": ".ds-toast { position: fixed; right: 24px; bottom: 24px; max-width: 360px; padding: 12px 16px; border-radius: 8px; background: #1e293b; color: #ffffff; font-family: \"Segoe UI\", system-ui, -apple-system, sans-serif; font-size: 0.9rem; font-weight: 600; box-shadow: 0 1px 3px rgba(15, 23, 42, 0.08), 0 8px 24px rgba(15, 23, 42, 0.06); animation: ds-toast-in 0.15s cubic-bezier(0.16, 1, 0.3, 1); } .ds-toast-success { background: #047857; color: #ffffff; } .ds-toast-danger { background: #b91c1c; color: #ffffff; } @keyframes ds-toast-in { from { opacity: 0; transform: translateY(6px); } to { opacity: 1; transform: translateY(0); } } @media (prefers-reduced-motion: reduce) { .ds-toast { animation: none; } }"
+    },
+    {
+      "name": "Progress Steps",
+      "kind": "custom",
+      "refersTo": "upload-progress",
+      "description": "Ordered progress steps (upload and save modal); active spinning ring is the only loop; error shows a white X on Risk Red. Save progress reuses the same chrome for cleanup → apply → build → download via /api/save/process + /api/save/download.",
+      "html": "<ol class=\"ds-progress\"><li class=\"ds-step ds-step-done\"><span class=\"ds-step-icon\" aria-hidden=\"true\"></span><span>Decrypt Aegis</span></li><li class=\"ds-step ds-step-active\"><span class=\"ds-step-icon\" aria-hidden=\"true\"></span><span>Open KeePass</span></li><li class=\"ds-step ds-step-error\"><span class=\"ds-step-icon\" aria-hidden=\"true\"></span><span>Match entries</span></li></ol>",
+      "css": ".ds-progress { list-style: none; margin: 0; padding: 0; display: flex; flex-direction: column; gap: 8px; font-family: \"Segoe UI\", system-ui, -apple-system, sans-serif; color: #1a1f2e; } .ds-step { display: flex; align-items: flex-start; gap: 10px; padding: 10px 12px; border: 1px solid #dde3ed; border-radius: 8px; background: #f8fafc; opacity: 0.65; font-size: 0.9rem; font-weight: 600; transition: opacity 0.2s, border-color 0.2s, box-shadow 0.2s; } .ds-step-active, .ds-step-done, .ds-step-error { opacity: 1; } .ds-step-active { border-color: #2563eb; box-shadow: 0 0 0 2px rgba(37, 99, 235, 0.12); } .ds-step-error { border-color: #dc2626; } .ds-step-icon { flex-shrink: 0; width: 1.25rem; height: 1.25rem; margin-top: 2px; border-radius: 50%; border: 2px solid #dde3ed; background: #ffffff; position: relative; } .ds-step-active .ds-step-icon { border-color: #2563eb; border-top-color: transparent; animation: ds-spin 0.8s linear infinite; } .ds-step-done .ds-step-icon { border-color: #047857; background: #047857; } .ds-step-done .ds-step-icon::after { content: \"\"; position: absolute; left: 4px; top: 1px; width: 5px; height: 9px; border: solid #ffffff; border-width: 0 2px 2px 0; transform: rotate(45deg); } .ds-step-error .ds-step-icon { border-color: #dc2626; background: #dc2626; } .ds-step-error .ds-step-icon::before, .ds-step-error .ds-step-icon::after { content: \"\"; position: absolute; left: 50%; top: 50%; width: 8px; height: 2px; background: #ffffff; } .ds-step-error .ds-step-icon::before { transform: translate(-50%, -50%) rotate(45deg); } .ds-step-error .ds-step-icon::after { transform: translate(-50%, -50%) rotate(-45deg); } @keyframes ds-spin { to { transform: rotate(360deg); } } @media (prefers-reduced-motion: reduce) { .ds-step-active .ds-step-icon { animation: none; border-color: #2563eb; background: #eff6ff; } }"
+    }
+  ],
+  "narrative": {
+    "northStar": "The Local Vault Desk",
+    "overview": "A cool operate console for a single trusted localhost session. Surfaces stay quiet—paper-bright by day, deep slate desk by night—with one blue accent so the job (upload → review → download) stays legible and the security story never competes with chrome. The AK mark is the only ornamental signal; everything else reads as a careful toolshed UI for encrypted backups.\n\nDensity favors task clarity over marketing: short headers, muted supporting copy, compact toolbars, and a data table as the review workspace. Status color (green / red / amber) carries match state; the primary blue is reserved for progress, focus, and the decisive actions that move the session forward. Visual restraint is the trust model: no spectacle, no decorative depth theater, no brand voice louder than the product name.\n\nTheme preference defaults to the OS (`prefers-color-scheme`). When the OS does not define a preference, the desk opens in dark. Users can cycle System → Light → Dark from the header. Confirmed visual rejections: no purple-washed marketing gradients across the page, no heavy multi-layer glow, no emoji as system iconography, and no composition that treats the first viewport as a landing hero. This is an app shell with a three-step flow, not a promotional surface.",
+    "keyCharacteristics": [
+      "Dual theme: cool paper (`bg` / `surface`) or dark desk (`dark-bg` / `dark-surface`) with one soft ambient shadow",
+      "One primary blue accent plus semantic green / red / amber for match and risk states",
+      "Single system UI type stack for all roles; hierarchy comes from size and weight, not family contrast",
+      "Operate-mode density: header + step rail + theme control, focused upload card, full-width review table",
+      "AK vault-shield logo mark (Trust Blue → indigo, white **AK**) as the only identity ornament in chrome; local PNG under `app/static/img/`"
+    ],
+    "rules": [
+      {
+        "name": "The One Accent Rule",
+        "body": "Trust Blue is the only brand accent on a screen; green, red, and amber speak status only. Do not invent a second brand hue for decoration.",
+        "section": "colors"
+      },
+      {
+        "name": "The Status-Means-State Rule",
+        "body": "Semantic fills appear when match, conflict, or progress state changes—not as ambient section coloring.",
+        "section": "colors"
+      },
+      {
+        "name": "The Fill vs Foreground Rule",
+        "body": "Solid CTA fills use `primary` / `danger` / `success-fill` with `on-accent` or `on-success`. Text and icons on paper/desk surfaces use `*-fg` (or surface-tuned `success`) so dark theme never puts mid-luminance fills behind white labels or pastel labels on slate.",
+        "section": "colors"
+      },
+      {
+        "name": "The One Face Rule",
+        "body": "All roles share the system UI stack. Do not introduce a decorative display family for “brand presence”; the AK mark carries identity.",
+        "section": "typography"
+      },
+      {
+        "name": "The Micro-Label Rule",
+        "body": "Uppercase + tracked micro type is reserved for tabular/stat metadata—not for section kickers or marketing eyebrows.",
+        "section": "typography"
+      },
+      {
+        "name": "The Task-First Density Rule",
+        "body": "Prefer compact toolbars and table density over spacious marketing sections. One job per view: upload form, or match review, or download confirmation.",
+        "section": "layout"
+      },
+      {
+        "name": "The One Shadow Rule",
+        "body": "Reuse the shared surface-lift token for elevated panels. Do not stack unique dramatic shadows per component.",
+        "section": "elevation"
+      },
+      {
+        "name": "The Flat-Rest Controls Rule",
+        "body": "Buttons and chips are flat fills; elevation belongs to containing surfaces, not to every control.",
+        "section": "elevation"
+      },
+      {
+        "name": "The Soft-Tool Radius Rule",
+        "body": "Prefer `8px` controls and `12px` panels. Reserve pills for status chips; do not pill primary buttons.",
+        "section": "shapes"
+      },
+      {
+        "name": "The Feedback-Not-Spectacle Rule",
+        "body": "Animate cause→result (hover, active step, toast). Do not add page-load choreography or scroll reveals. Under `prefers-reduced-motion`, remove loops and entrance transforms; keep short color/opacity state changes.",
+        "section": "components"
+      }
+    ],
+    "dos": [
+      "Do keep screens task-clear: one primary CTA path (continue / download) in Trust Blue, secondary actions in quiet gray.",
+      "Do use semantic green/red/amber only for match, conflict, progress, and risk states.",
+      "Do elevate work with the shared Surface Lift card on Cool Paper; keep controls flat.",
+      "Do preserve the AK mark + product name as the header identity pair; keep the subtitle as one muted utility line.",
+      "Do collapse the upload drop grid to a single column at `640px` and keep the review table horizontally scrollable rather than cardifying every row.",
+      "Do use `primary` / `danger` / `success-fill` for solid fills with on-colors, and `*-fg` accents for text on surfaces (Fill vs Foreground Rule).",
+      "Do enlarge interactive targets to `44px` when `pointer: coarse`, and honor safe-area insets on notched devices.",
+      "Do respect `prefers-reduced-motion` by replacing the progress spinner with a static active indicator—never a global `0.01ms` transition kill."
+    ],
+    "donts": [
+      "Don't introduce a second brand accent or wash the page in indigo/purple gradients (indigo stops at the AK mark).",
+      "Don't treat system UI type as a decorative display brand face or pair it with an ornamental serif for “premium.”",
+      "Don't add marketing kickers/eyebrows, hero compositions, stat-strip landing layouts, or emoji as system iconography for new surfaces.",
+      "Don't invent per-component shadow stacks or glow focus; keep both themes on the shared Surface Lift token and flat controls.",
+      "Don't use pill radii on primary buttons or turn every container into a floating card; cards wrap jobs, not every label.",
+      "Don't load fonts, scripts, stylesheets, or icon kits from a CDN or any remote host; the UI must run offline from assets bundled in the container.",
+      "Don't add bounce/elastic easing, scroll-driven reveals, or looping decoration outside the upload progress active step."
+    ]
+  }
+}

@@ -28,6 +28,8 @@ class SessionData:
     pending_aegis: Optional[SecureBytes] = None
     pending_keepass: Optional[SecureBytes] = None
     pending_keyfile: Optional[SecureBytes] = None
+    pending_download: Optional[SecureBytes] = None
+    save_summary: Dict = field(default_factory=dict)
     match_assignments: Dict = field(default_factory=dict)
     initial_assignments: Dict = field(default_factory=dict)
     wipe_registry: WipeRegistry = field(default_factory=WipeRegistry)
@@ -70,7 +72,13 @@ class SessionData:
         if self.keepass_keyfile_bytes is not None:
             self.keepass_keyfile_bytes.wipe()
 
-        for attr in ('aegis_password', 'pending_aegis', 'pending_keepass', 'pending_keyfile'):
+        for attr in (
+            'aegis_password',
+            'pending_aegis',
+            'pending_keepass',
+            'pending_keyfile',
+            'pending_download',
+        ):
             buf = getattr(self, attr)
             if buf is not None:
                 buf.wipe()
@@ -86,6 +94,7 @@ class SessionData:
         self.keepass_keyfile_bytes = None
         self.match_assignments = {}
         self.initial_assignments = {}
+        self.save_summary = {}
         gc.collect()
 
 

@@ -78,7 +78,7 @@ After changing Python dependencies, refresh third-party license text at the repo
 ./scripts/update-notices.sh
 ```
 
-That writes `NOTICES` from a temporary venv with `requirements.txt` via `[pip-licenses](https://pypi.org/project/pip-licenses/)` (PyPI packages only; not Alpine OS packages).
+That writes `NOTICES` from a temporary venv with `requirements.txt` via `[pip-licenses](https://pypi.org/project/pip-licenses/)` (PyPI packages), plus fixed Alpine base-image and Impeccable (Apache-2.0) attribution sections.
 
 Deactivate the venv when finished:
 
@@ -199,7 +199,7 @@ Expect HTTP 200.
 4. Enter passwords (and keyfile if required).
 5. Confirm matches on the review page; try a manual link if needed.
 6. Download `keepass-merged.kdbx` and open it in KeePassXC / KeePass to verify TOTP fields.
-7. Confirm **End session** clears the session and returns you to upload.
+7. Confirm **Start new merge** (after download) or **End session** (during review) returns you to upload with the session cleared.
 
 
 

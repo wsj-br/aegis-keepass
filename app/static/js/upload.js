@@ -1,10 +1,3 @@
-function showToast(msg, type) {
-    const t = document.getElementById('toast');
-    t.textContent = msg;
-    t.className = 'toast show ' + (type || '');
-    setTimeout(() => { t.className = 'toast'; }, 5000);
-}
-
 const UPLOAD_STEPS = [
     {
         id: 'upload',
@@ -229,6 +222,17 @@ async function runProcessingPipeline(formData) {
 setupDropZone('aegis-drop', 'aegis-input', 'aegis-name');
 setupDropZone('keepass-drop', 'keepass-input', 'keepass-name');
 
+document.querySelectorAll('[data-password-toggle]').forEach((btn) => {
+    btn.addEventListener('click', () => {
+        const input = document.getElementById(btn.getAttribute('data-password-toggle'));
+        if (!input) return;
+        const show = input.type === 'password';
+        input.type = show ? 'text' : 'password';
+        btn.setAttribute('aria-pressed', show ? 'true' : 'false');
+        btn.setAttribute('aria-label', show ? 'Hide password' : 'Show password');
+    });
+});
+
 const keyfileInput = document.getElementById('keyfile-input');
 const keyfileBtn = document.getElementById('keyfile-btn');
 const keyfileName = document.getElementById('keyfile-name');
@@ -248,16 +252,37 @@ document.getElementById('upload-form').addEventListener('submit', async (e) => {
     const aegisPassword = document.getElementById('aegis-password-input').value;
     const keepassPassword = document.getElementById('keepass-password-input').value;
 
+    const aegisPasswordInput = document.getElementById('aegis-password-input');
+    const keepassPasswordInput = document.getElementById('keepass-password-input');
+    const aegisInput = document.getElementById('aegis-input');
+    const keepassInput = document.getElementById('keepass-input');
+
+    aegisPasswordInput.removeAttribute('aria-invalid');
+    keepassPasswordInput.removeAttribute('aria-invalid');
+    aegisInput.removeAttribute('aria-invalid');
+    keepassInput.removeAttribute('aria-invalid');
+
     if (!aegis || !keepass) {
         showToast('Please select both files.', 'error');
+        if (!aegis) {
+            aegisInput.setAttribute('aria-invalid', 'true');
+            aegisInput.focus();
+        } else {
+            keepassInput.setAttribute('aria-invalid', 'true');
+            keepassInput.focus();
+        }
         return;
     }
     if (!aegisPassword) {
         showToast('Please enter the Aegis backup password.', 'error');
+        aegisPasswordInput.setAttribute('aria-invalid', 'true');
+        aegisPasswordInput.focus();
         return;
     }
     if (!keepassPassword) {
         showToast('Please enter the KeePass master password.', 'error');
+        keepassPasswordInput.setAttribute('aria-invalid', 'true');
+        keepassPasswordInput.focus();
         return;
     }
 

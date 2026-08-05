@@ -21,27 +21,40 @@
         <div class="stat-chip stat-danger"><span class="stat-label">Unmatched</span><strong id="stat-unmatched">-</strong></div>
     </div>
     <div class="toolbar-controls">
-        <div class="filters" role="group" aria-label="Filter entries">
-            <button class="filter-btn active" data-status="all" type="button">All</button>
-            <button class="filter-btn" data-status="matched" type="button">Matched</button>
-            <button class="filter-btn" data-status="unmatched" type="button">Unmatched</button>
+        <div class="toolbar-find">
+            <div class="filters" role="group" aria-label="Filter entries">
+                <button class="filter-btn active" data-status="all" type="button" aria-pressed="true">All</button>
+                <button class="filter-btn" data-status="matched" type="button" aria-pressed="false">Matched</button>
+                <button class="filter-btn" data-status="unmatched" type="button" aria-pressed="false">Unmatched</button>
+                <button
+                    class="filter-btn"
+                    data-status="no_uuid"
+                    type="button"
+                    aria-pressed="false"
+                    title="Matched KeePass entries that do not yet have an AegisUUID marker"
+                >No Aegis UUID</button>
+            </div>
+            <label class="visually-hidden" for="aegis-filter">Filter Aegis entries</label>
+            <input type="search" class="search-input" id="aegis-filter" placeholder="Filter Aegis entries…" autocomplete="off">
         </div>
-        <input type="search" class="search-input" id="aegis-filter" placeholder="Filter Aegis entries…">
-        <button class="btn btn-primary" id="save-btn" type="button">Download merged database</button>
-        <button class="btn btn-secondary" id="end-session-btn" type="button">End session</button>
+        <div class="toolbar-actions">
+            <button class="btn btn-primary" id="save-btn" type="button">Download merged database</button>
+            <button class="btn btn-secondary" id="end-session-btn" type="button">End session</button>
+        </div>
     </div>
 </section>
 
 <section class="card table-card" id="entries-section">
     <div class="table-wrap">
         <table>
+            <caption class="visually-hidden">Aegis to KeePass entry matches</caption>
             <thead>
                 <tr>
-                    <th>Status</th>
-                    <th>Aegis Entry</th>
-                    <th>KeePass Entry</th>
-                    <th>Match Info</th>
-                    <th>Actions</th>
+                    <th scope="col">Status</th>
+                    <th scope="col">Aegis Entry</th>
+                    <th scope="col">KeePass Entry</th>
+                    <th scope="col">Match Info</th>
+                    <th scope="col">Actions</th>
                 </tr>
             </thead>
             <tbody id="entries-body">
@@ -54,7 +67,6 @@
 
 <section class="card complete-card" id="complete-section" hidden>
     <div class="complete-header">
-        <p class="complete-eyebrow">Step 3 complete</p>
         <h2>Download complete</h2>
         <p><strong>keepass-merged.kdbx</strong> has been saved to your device.</p>
     </div>
@@ -65,30 +77,31 @@
         <div class="stat-chip"><span class="stat-label">Cleaned</span><strong id="complete-cleaned">-</strong></div>
     </div>
     <div class="complete-actions">
-        <button class="btn btn-secondary" id="complete-end-session-btn" type="button">End session</button>
+        <button class="btn btn-primary" id="complete-restart-btn" type="button">Start new merge</button>
     </div>
 </section>
 
-<div class="modal-overlay" id="picker-modal">
+<div class="modal-overlay" id="picker-modal" aria-hidden="true">
     <div class="modal" role="dialog" aria-modal="true" aria-labelledby="picker-title">
         <div class="modal-header">
             <h2 id="picker-title">Select KeePass Entry</h2>
             <div class="modal-actions">
                 <button class="btn btn-primary btn-sm" id="suggest-btn" type="button">Suggest</button>
             </div>
-            <input type="search" class="search-input" id="keepass-search" placeholder="Search KeePass by title, username, URL…" style="width:100%;">
+            <label class="visually-hidden" for="keepass-search">Search KeePass entries</label>
+            <input type="search" class="search-input" id="keepass-search" placeholder="Search KeePass by title, username, URL…" autocomplete="off">
         </div>
         <div class="modal-body" id="search-results"></div>
         <div class="modal-footer picker-footer">
             <div class="pagination" id="search-pagination"></div>
-            <button class="btn btn-secondary" type="button" onclick="closePicker()">Cancel</button>
+            <button class="btn btn-secondary" id="picker-cancel-btn" type="button">Cancel</button>
         </div>
     </div>
 </div>
 
-<div class="modal-overlay" id="conflict-modal">
-    <div class="modal" role="dialog" aria-modal="true">
-        <div class="modal-header"><h2>Reassign KeePass entry?</h2></div>
+<div class="modal-overlay" id="conflict-modal" aria-hidden="true">
+    <div class="modal" role="dialog" aria-modal="true" aria-labelledby="conflict-title">
+        <div class="modal-header"><h2 id="conflict-title">Reassign KeePass entry?</h2></div>
         <div class="modal-body" id="conflict-body"></div>
         <div class="modal-footer">
             <button class="btn btn-secondary" id="conflict-cancel-btn" type="button">Cancel</button>
@@ -97,12 +110,55 @@
     </div>
 </div>
 
-<div class="modal-overlay" id="info-modal">
+<div class="modal-overlay" id="info-modal" aria-hidden="true">
     <div class="modal" role="dialog" aria-modal="true" aria-labelledby="info-modal-title">
         <div class="modal-header"><h2 id="info-modal-title">Entry Details</h2></div>
         <div class="modal-body" id="info-body"></div>
         <div class="modal-footer">
             <button class="btn btn-secondary" id="info-close-btn" type="button">Close</button>
+        </div>
+    </div>
+</div>
+
+<div class="modal-overlay" id="save-modal" aria-hidden="true">
+    <div class="modal modal-save" role="dialog" aria-modal="true" aria-labelledby="save-modal-title">
+        <div class="modal-header">
+            <h2 id="save-modal-title">Download merged database?</h2>
+        </div>
+        <div class="modal-body">
+            <div id="save-confirm-panel">
+                <p class="save-confirm-copy">
+                    Apply imported OTP secrets to matched KeePass entries and download
+                    <strong>keepass-merged.kdbx</strong>. This ends the session and securely
+                    wipes server memory.
+                </p>
+            </div>
+            <div id="save-progress-panel" class="save-progress" hidden aria-live="polite" aria-busy="false">
+                <p class="upload-progress-detail" id="save-progress-detail">Starting…</p>
+                <ol class="progress-steps" id="save-progress-steps"></ol>
+            </div>
+        </div>
+        <div class="modal-footer" id="save-modal-footer">
+            <button class="btn btn-secondary" id="save-cancel-btn" type="button">Cancel</button>
+            <button class="btn btn-primary" id="save-confirm-btn" type="button">Download merged database</button>
+        </div>
+    </div>
+</div>
+
+<div class="modal-overlay" id="end-session-modal" aria-hidden="true">
+    <div class="modal" role="dialog" aria-modal="true" aria-labelledby="end-session-title">
+        <div class="modal-header">
+            <h2 id="end-session-title">End this session?</h2>
+        </div>
+        <div class="modal-body">
+            <p class="save-confirm-copy">
+                End the session and wipe all uploaded files, passwords, and match state from memory.
+                This cannot be undone.
+            </p>
+        </div>
+        <div class="modal-footer">
+            <button class="btn btn-secondary" id="end-session-cancel-btn" type="button">Cancel</button>
+            <button class="btn btn-danger" id="end-session-confirm-btn" type="button">End session</button>
         </div>
     </div>
 </div>

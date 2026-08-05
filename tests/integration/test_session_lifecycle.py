@@ -38,6 +38,48 @@ def test_save_returns_kdbx_and_clears_session(authed_client, session_store):
     assert later.status_code == 401
 
 
+def test_save_process_steps_then_download(authed_client, session_store):
+    bad = authed_client.post("/api/save/download")
+    assert bad.status_code == 400
+
+    cleanup = authed_client.post(
+        "/api/save/process",
+        json={"step": "cleanup"},
+    )
+    assert cleanup.status_code == 200
+    assert cleanup.get_json()["step"] == "cleanup"
+    assert "cleaned_count" in cleanup.get_json()
+    assert len(session_store._sessions) == 1
+
+    apply = authed_client.post(
+        "/api/save/process",
+        json={"step": "apply"},
+    )
+    assert apply.status_code == 200
+    assert "updated_count" in apply.get_json()
+
+    build = authed_client.post(
+        "/api/save/process",
+        json={"step": "build"},
+    )
+    assert build.status_code == 200
+    body = build.get_json()
+    assert body["total"] >= 1
+    assert "otp" in body
+
+    unknown = authed_client.post(
+        "/api/save/process",
+        json={"step": "nope"},
+    )
+    assert unknown.status_code == 400
+
+    resp = authed_client.post("/api/save/download")
+    assert resp.status_code == 200
+    assert resp.mimetype == "application/octet-stream"
+    assert resp.get_data()[:4] == b"\x03\xd9\xa2\x9a"
+    assert session_store._sessions == {}
+
+
 def test_idle_timeout(monkeypatch):
     monkeypatch.setenv("FLASK_SECRET_KEY", "test-secret-key")
     monkeypatch.setenv("SESSION_TIMEOUT_SECONDS", "1")

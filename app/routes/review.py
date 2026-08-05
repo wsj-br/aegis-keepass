@@ -17,6 +17,7 @@ from aegis_keepass_lib import (
     MatchResult,
 )
 from app.auth import clear_session_cookie, get_session_store, require_session, session_required_api
+from app.secure import SecureBytes
 from app.session import SessionData
 
 bp = Blueprint('review', __name__)
@@ -117,6 +118,8 @@ def _serialize_aegis_entry(aegis_entry: AegisEntry) -> Dict:
     else:
         display_confidence = confidence
 
+    keepass_has_aegis_uuid = bool(kp_entry and kp_entry.get_aegis_uuid())
+
     return {
         'aegis_uuid': aegis_entry.uuid,
         'display': aegis_entry.display_name,
@@ -126,6 +129,7 @@ def _serialize_aegis_entry(aegis_entry: AegisEntry) -> Dict:
         'keepass_uuid': keepass_uuid,
         'keepass_title': kp_entry.title if kp_entry else None,
         'keepass_has_otp': kp_entry.has_otp() if kp_entry else False,
+        'keepass_has_aegis_uuid': keepass_has_aegis_uuid,
         'confidence': display_confidence,
         'reason': assignment.get('reason', '') if matched else '',
         'source': assignment.get('source', 'auto'),
@@ -197,12 +201,20 @@ def api_aegis_entries():
     status = request.args.get('status', 'all')
     query = _normalize_search(request.args.get('q', ''))
 
+    all_rows = [
+        _serialize_aegis_entry(aegis_entry)
+        for aegis_entry in _session().aegis_entries
+    ]
+
     entries = []
-    for aegis_entry in _session().aegis_entries:
-        row = _serialize_aegis_entry(aegis_entry)
+    for row in all_rows:
         if status == 'matched' and not row['matched']:
             continue
         if status == 'unmatched' and row['matched']:
+            continue
+        if status == 'no_uuid' and (
+            not row['matched'] or row['keepass_has_aegis_uuid']
+        ):
             continue
         if query:
             haystack = _normalize_search(
@@ -214,11 +226,12 @@ def api_aegis_entries():
 
     entries.sort(key=lambda row: row['display'].casefold())
 
-    matched_count = sum(
-        1 for a in _session().match_assignments.values()
-        if a.get('keepass_uuid')
+    matched_count = sum(1 for row in all_rows if row['matched'])
+    no_uuid_count = sum(
+        1 for row in all_rows
+        if row['matched'] and not row['keepass_has_aegis_uuid']
     )
-    total = len(_session().aegis_entries)
+    total = len(all_rows)
 
     return jsonify({
         'entries': entries,
@@ -226,6 +239,7 @@ def api_aegis_entries():
             'total': total,
             'matched': matched_count,
             'unmatched': total - matched_count,
+            'no_uuid': no_uuid_count,
         },
     })
 
@@ -438,17 +452,8 @@ def api_clear_match():
     })
 
 
-@bp.route('/api/save', methods=['POST'])
-@session_required_api
-def api_save():
-    session = _session()
-    if session.keepass_db is None:
-        return jsonify({'error': 'No KeePass data loaded'}), 400
-
-    updater = KeePassUpdater(session.keepass_db)
+def _cleanup_stale_links(session: SessionData, updater: KeePassUpdater) -> int:
     cleaned_count = 0
-    updated_count = 0
-
     current_by_aegis = {
         uuid: a.get('keepass_uuid')
         for uuid, a in session.match_assignments.items()
@@ -488,6 +493,11 @@ def api_save():
             if changes['marker_removed'] or changes['fields_removed']:
                 cleaned_count += 1
 
+    return cleaned_count
+
+
+def _apply_otp_matches(session: SessionData, updater: KeePassUpdater) -> int:
+    updated_count = 0
     for aegis_uuid, assignment in session.match_assignments.items():
         keepass_uuid = assignment.get('keepass_uuid')
         if not keepass_uuid:
@@ -508,18 +518,40 @@ def api_save():
         if changes['fields_added'] or changes['fields_updated'] or changes['notes_updated']:
             updated_count += 1
 
+    return updated_count
+
+
+def _build_merged_download(session: SessionData, updater: KeePassUpdater) -> Dict:
     matchable_entries = KeePassKdbx.matchable_entries(session.keepass_entries)
     total_entries = len(matchable_entries)
     otp_entries = sum(1 for e in matchable_entries if e.has_otp())
-
-    kdbx_bytes = updater.save_bytes()
     unmatched_count = sum(
         1 for a in session.match_assignments.values()
         if not a.get('keepass_uuid')
     )
 
-    # Wipe immediately: download bytes are already captured in kdbx_bytes.
-    # (call_on_close is unreliable under Flask's test client and delays wipe.)
+    kdbx_bytes = updater.save_bytes()
+    if session.pending_download is not None:
+        session.pending_download.wipe()
+    session.pending_download = SecureBytes(kdbx_bytes, registry=session.wipe_registry)
+
+    summary = {
+        'updated': int(session.save_summary.get('updated', 0)),
+        'cleaned': int(session.save_summary.get('cleaned', 0)),
+        'unmatched': unmatched_count,
+        'total': total_entries,
+        'otp': otp_entries,
+    }
+    session.save_summary = summary
+    return summary
+
+
+def _download_merged_response(session: SessionData):
+    if session.pending_download is None:
+        return jsonify({'error': 'Merged database is not ready. Run save steps first.'}), 400
+
+    summary = session.save_summary or {}
+    kdbx_bytes = bytes(session.pending_download)
     session_id = session.session_id
     get_session_store().destroy(session_id)
 
@@ -529,12 +561,79 @@ def api_save():
         as_attachment=True,
         download_name='keepass-merged.kdbx',
     )
-    response.headers['X-Updated-Count'] = str(updated_count)
-    response.headers['X-Cleaned-Count'] = str(cleaned_count)
-    response.headers['X-Unmatched-Count'] = str(unmatched_count)
-    response.headers['X-Total-Entries'] = str(total_entries)
-    response.headers['X-Otp-Entries'] = str(otp_entries)
+    response.headers['X-Updated-Count'] = str(summary.get('updated', 0))
+    response.headers['X-Cleaned-Count'] = str(summary.get('cleaned', 0))
+    response.headers['X-Unmatched-Count'] = str(summary.get('unmatched', 0))
+    response.headers['X-Total-Entries'] = str(summary.get('total', 0))
+    response.headers['X-Otp-Entries'] = str(summary.get('otp', 0))
     return clear_session_cookie(response)
+
+
+@bp.route('/api/save/process', methods=['POST'])
+@session_required_api
+def api_save_process():
+    """Stepped merge for the download progress UI (mirrors /api/upload/process)."""
+    from flask import request
+
+    session = _session()
+    if session.keepass_db is None:
+        return jsonify({'error': 'No KeePass data loaded'}), 400
+
+    data = request.get_json(silent=True) or {}
+    step = data.get('step')
+    updater = KeePassUpdater(session.keepass_db)
+
+    if step == 'cleanup':
+        cleaned = _cleanup_stale_links(session, updater)
+        session.save_summary = {**session.save_summary, 'cleaned': cleaned}
+        return jsonify({
+            'success': True,
+            'step': step,
+            'cleaned_count': cleaned,
+        })
+
+    if step == 'apply':
+        updated = _apply_otp_matches(session, updater)
+        session.save_summary = {**session.save_summary, 'updated': updated}
+        return jsonify({
+            'success': True,
+            'step': step,
+            'updated_count': updated,
+        })
+
+    if step == 'build':
+        summary = _build_merged_download(session, updater)
+        return jsonify({
+            'success': True,
+            'step': step,
+            **summary,
+        })
+
+    return jsonify({
+        'error': 'Unknown save step. Expected cleanup, apply, or build.',
+    }), 400
+
+
+@bp.route('/api/save/download', methods=['POST'])
+@session_required_api
+def api_save_download():
+    return _download_merged_response(_session())
+
+
+@bp.route('/api/save', methods=['POST'])
+@session_required_api
+def api_save():
+    """One-shot merge + download (tests and non-UI clients)."""
+    session = _session()
+    if session.keepass_db is None:
+        return jsonify({'error': 'No KeePass data loaded'}), 400
+
+    updater = KeePassUpdater(session.keepass_db)
+    cleaned = _cleanup_stale_links(session, updater)
+    updated = _apply_otp_matches(session, updater)
+    session.save_summary = {'cleaned': cleaned, 'updated': updated}
+    _build_merged_download(session, updater)
+    return _download_merged_response(session)
 
 
 @bp.route('/api/session/end', methods=['POST'])
