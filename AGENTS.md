@@ -148,16 +148,18 @@ Run locally (preferred for fast iteration):
 ```bash
 source .venv/bin/activate
 export FLASK_SECRET_KEY=dev-secret   # optional; stabilizes session cookies across restarts
-gunicorn --bind 127.0.0.1:8580 --workers 1 --timeout 120 wsgi:app
+gunicorn --bind 127.0.0.1:8580 --bind '[::1]:8580' --workers 1 --timeout 120 wsgi:app
 ```
 
-Open [http://127.0.0.1:8580](http://127.0.0.1:8580).
+Open [http://127.0.0.1:8580](http://127.0.0.1:8580). Wait until the worker has booted (`Booting worker` in the log, or `/health` returns 200) before loading the UI.
 
 Run in Docker (matches production image):
 
 ```bash
-docker compose up --build
+docker compose up --build --wait && docker compose logs -f
 ```
+
+(`--wait` implies detached mode; `logs -f` is what shows the Gunicorn `Listening` / `Booting worker` lines.)
 
 After changing `Dockerfile` or dependencies, rebuild with `--build`. Python-only changes do not require a rebuild when using the venv path.
 

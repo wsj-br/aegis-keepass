@@ -4,7 +4,10 @@ services:
     container_name: aegis-keepass
     build: .
     ports:
+      # Publish both IPv4 and IPv6 loopback so http://localhost:8580 works.
+      # IPv4-only publish leaves ::1 closed; some browsers stall on localhost before falling back.
       - "127.0.0.1:8580:8580"
+      - "::1:8580:8580"
     environment:
       - SESSION_TIMEOUT_SECONDS=1800
       - MAX_IN_MEMORY_UPLOAD_BYTES=33554432

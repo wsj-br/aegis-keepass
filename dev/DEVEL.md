@@ -96,12 +96,12 @@ This project is a Python Flask app. There is no separate compile step for applic
 
 ```bash
 source .venv/bin/activate
-gunicorn --bind 127.0.0.1:8580 --workers 1 --timeout 120 wsgi:app
+gunicorn --bind 127.0.0.1:8580 --bind '[::1]:8580' --workers 1 --timeout 120 wsgi:app
 ```
 
-Open [http://localhost:8580](http://localhost:8580).
+Open [http://127.0.0.1:8580](http://127.0.0.1:8580) (or `http://localhost:8580` — both loopbacks are bound).
 
-Use a **single worker** so in-memory session state stays consistent across requests.
+Use a **single worker** so in-memory session state stays consistent across requests. Wait until the log shows `Booting worker` before loading the page; opening the URL the instant the process starts can race the worker import.
 
 Useful environment variables (optional):
 
@@ -118,7 +118,7 @@ Example:
 
 ```bash
 export FLASK_SECRET_KEY=dev-secret
-gunicorn --bind 127.0.0.1:8580 --workers 1 --timeout 120 wsgi:app
+gunicorn --bind 127.0.0.1:8580 --bind '[::1]:8580' --workers 1 --timeout 120 wsgi:app
 ```
 
 
@@ -126,10 +126,20 @@ gunicorn --bind 127.0.0.1:8580 --workers 1 --timeout 120 wsgi:app
 ### Docker Compose (recommended smoke environment)
 
 ```bash
+docker compose up --build --wait && docker compose logs -f
+```
+
+`--wait` blocks until the health check passes, then `logs -f` streams Gunicorn output (`Listening at` / `Booting worker`). Note: `--wait` always runs detached, so logs do not appear during the wait itself.
+
+Alternatively, attach immediately (logs stream from the first line; open the UI only after `Booting worker`):
+
+```bash
 docker compose up --build
 ```
 
-Open [http://localhost:8580](http://localhost:8580). Stop with `Ctrl+C` or:
+Docker publishes the host port before Gunicorn is listening, so opening the UI too early can show a connection reset; a refresh after ready works. Compose maps both `127.0.0.1` and `::1` on port 8580.
+
+Open [http://127.0.0.1:8580](http://127.0.0.1:8580). Stop with `Ctrl+C` or:
 
 ```bash
 docker compose down
@@ -141,7 +151,7 @@ docker compose down
 
 ```bash
 docker build -t aegis-keepass:dev .
-docker run --rm -p 127.0.0.1:8580:8580 aegis-keepass:dev
+docker run --rm -p 127.0.0.1:8580:8580 -p '[::1]:8580:8580' aegis-keepass:dev
 ```
 
 The published image uses `python:3.13-alpine` (musl). Local development can stay on Python 3.12+; the image Python may be newer.
@@ -193,8 +203,8 @@ Expect HTTP 200.
 
 ### 4. Manual smoke test (UI)
 
-1. Start the app (`gunicorn` or `docker compose up --build`).
-2. Open [http://localhost:8580](http://localhost:8580).
+1. Start the app (`gunicorn` or `docker compose up --build --wait && docker compose logs -f`).
+2. Open [http://127.0.0.1:8580](http://127.0.0.1:8580).
 3. Upload an **encrypted** Aegis `.json` backup and a KeePass `.kdbx` (use copies of real files; keep originals safe).
 4. Enter passwords (and keyfile if required).
 5. Confirm matches on the review page; try a manual link if needed.
@@ -205,7 +215,7 @@ Expect HTTP 200.
 
 ### 5. Container health check
 
-After `docker compose up --build`:
+After Compose is up and healthy:
 
 ```bash
 docker compose ps

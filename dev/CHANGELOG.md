@@ -7,6 +7,12 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+### Fixed
+- First browser load after start no longer races a half-ready server: Compose and start scripts publish both `127.0.0.1` and `::1` (so `localhost` does not stall on IPv6), and the start scripts wait for `/health` before opening or advertising the UI.
+
+### Changed
+- Documented that `docker compose up --wait` runs detached (no live Gunicorn logs during wait); recommended follow-up is `docker compose logs -f` to see `Listening` / `Booting worker`.
+
 ### Added
 - Upload password fields include an in-control show/hide toggle (eye icon) for Aegis and KeePass passwords.
 - Review filter **No Aegis UUID** lists matched entries whose KeePass target does not yet have an `AegisUUID` marker (first-time links).

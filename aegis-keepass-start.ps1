@@ -147,7 +147,9 @@ $runArgs = @(
     "run",
     "--name", $Name,
     "--rm",
+    # Dual-stack loopback: browsers often try ::1 first for "localhost".
     "-p", "127.0.0.1:${Port}:8580",
+    "-p", "[::1]:${Port}:8580",
     "--read-only",
     "--tmpfs", "/tmp:size=64M,mode=1777",
     "-e", "SESSION_TIMEOUT_SECONDS=${sessionTimeout}",
@@ -159,10 +161,9 @@ if ($env:FLASK_SECRET_KEY) {
     $runArgs += @("-e", "FLASK_SECRET_KEY=$($env:FLASK_SECRET_KEY)")
 }
 
-if ($Detach) {
-    $runArgs += "-d"
-}
-
+# Always detach so we can wait for /health before opening the UI.
+# Foreground mode follows logs until Ctrl+C.
+$runArgs += "-d"
 $runArgs += $Image
 
 function Wait-Healthy {
@@ -183,34 +184,32 @@ function Wait-Healthy {
 
 Write-Host "Starting ${Image} on ${Url} ..."
 
-if ($Detach) {
-    & docker @runArgs
-    if ($LASTEXITCODE -ne 0) {
-        Fail "docker run failed"
-    }
-    if (Wait-Healthy) {
-        Write-Host "Ready at ${Url}"
-    }
-    else {
-        Write-Host "Container started; health check not ready yet. Try: ${Url}"
-    }
-    Write-Host "Logs:  docker logs -f ${Name}"
-    Write-Host "Stop:  .\aegis-keepass-start.ps1 -Stop   (or: docker stop ${Name})"
-    if ($Open) {
-        Start-Process $Url
-    }
+& docker @runArgs
+if ($LASTEXITCODE -ne 0) {
+    Fail "docker run failed"
+}
+
+if (Wait-Healthy) {
+    Write-Host "Ready at ${Url}"
 }
 else {
-    Write-Host "Open ${Url} in your browser. Press Ctrl+C to stop."
-    if ($Open) {
-        Start-Job -ScriptBlock {
-            param($Target)
-            Start-Sleep -Seconds 1
-            Start-Process $Target
-        } -ArgumentList $Url | Out-Null
+    Write-Host "Container started; health check not ready yet. Try: ${Url}"
+}
+
+if ($Open) {
+    Start-Process $Url
+}
+
+if ($Detach) {
+    Write-Host "Logs:  docker logs -f ${Name}"
+    Write-Host "Stop:  .\aegis-keepass-start.ps1 -Stop   (or: docker stop ${Name})"
+}
+else {
+    Write-Host "Press Ctrl+C to stop."
+    try {
+        & docker logs -f $Name
     }
-    & docker @runArgs
-    if ($LASTEXITCODE -ne 0) {
-        Fail "docker run failed"
+    finally {
+        docker stop $Name 1>$null 2>$null | Out-Null
     }
 }

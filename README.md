@@ -97,7 +97,8 @@ Useful options: `--detach` / `-Detach`, `--port 9090` / `-Port 9090`, `--tag 0.1
 Prefer the [Quick start](#quick-start) scripts. 
 
 ```bash
-docker run --rm -p 127.0.0.1:8580:8580 --read-only --tmpfs /tmp:size=64M,mode=1777 \
+docker run --rm -p 127.0.0.1:8580:8580 -p '[::1]:8580:8580' \
+  --read-only --tmpfs /tmp:size=64M,mode=1777 \
   ghcr.io/wsj-br/aegis-keepass:latest
 ```
 
@@ -179,7 +180,7 @@ These are KeePass 2.x native TOTP fields, compatible with KeePassXC and Keepass2
 - **In-memory processing** — Typical backups are held in wipeable buffers and never written to disk
 - **Secure wipe on session end** — Sensitive buffers are overwritten with random data, then zeroed, when you download or end the session
 - **No server-side retention** — The merged database is streamed to your browser; the server does not keep a copy
-- **Localhost-only host binding (with provided Compose file)** — Gunicorn listens on `0.0.0.0:8580` inside the container (normal for Docker port forwarding). The included `docker-compose.yml` maps that to **`127.0.0.1:8580` on the host**, so other machines cannot reach the app unless you change the port mapping (e.g. to `8580:8580`)
+- **Localhost-only host binding (with provided Compose file)** — Gunicorn listens on `0.0.0.0:8580` inside the container (normal for Docker port forwarding). The included `docker-compose.yml` maps that to **`127.0.0.1:8580` and `::1:8580` on the host**, so other machines cannot reach the app unless you change the port mapping (e.g. to `8580:8580`)
 - **Hardened container** — Non-root user, read-only filesystem, tmpfs for temporary files
 - **Offline UI** — CSS, JS, and icons are bundled in the image under `app/static/`; the pages do not load fonts or scripts from the internet
 - **Session cookies** — HttpOnly and SameSite=Strict; there is no login layer (intended for trusted localhost use)
@@ -201,6 +202,7 @@ Uploads exceeding the in-memory threshold (>32 MB combined) are encrypted and wr
 | Unmatched entries   | Use manual linking in the review step. Matching depends on title similarity—rename entries in KeePass or Aegis if titles differ significantly. |
 | Session expired     | Idle sessions time out after 30 minutes by default. Start again from the upload page.                                                          |
 | Port already in use | Stop any process on port 8580, or change the host port mapping in `docker-compose.yml`.                                                        |
+| First page blank / reset | Docker can publish the host port before Gunicorn is ready. Wait for `/health` (`curl -sf http://127.0.0.1:8580/health`) or `docker compose up --wait && docker compose logs -f`, then refresh. Prefer `http://127.0.0.1:8580` if `localhost` stalls. |
 
 ## License
 

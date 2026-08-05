@@ -154,7 +154,9 @@ fi
 RUN_ARGS=(
   --name "$CONTAINER_NAME"
   --rm
+  # Dual-stack loopback: browsers often try ::1 first for "localhost".
   -p "127.0.0.1:${HOST_PORT}:8580"
+  -p "[::1]:${HOST_PORT}:8580"
   --read-only
   --tmpfs "/tmp:size=64M,mode=1777"
   -e "SESSION_TIMEOUT_SECONDS=${SESSION_TIMEOUT_SECONDS}"
@@ -205,9 +207,20 @@ if [[ "$DETACH" == "true" ]]; then
     open_url
   fi
 else
-  echo "Open ${URL} in your browser. Press Ctrl+C to stop."
-  if [[ "$OPEN_BROWSER" == "true" ]]; then
-    (sleep 1; open_url) &
+  # Host port can accept before Gunicorn is ready (Docker proxy race → connection reset).
+  # Wait for /health before telling the user to open the UI (and before --open).
+  docker run -d "${RUN_ARGS[@]}" "$IMAGE" >/dev/null
+  if wait_healthy; then
+    echo "Ready at ${URL}. Press Ctrl+C to stop."
+  else
+    echo "Container started; health check not ready yet. Try: ${URL}"
+    echo "Press Ctrl+C to stop."
   fi
-  docker run "${RUN_ARGS[@]}" "$IMAGE"
+  if [[ "$OPEN_BROWSER" == "true" ]]; then
+    open_url
+  fi
+  trap 'docker stop "${CONTAINER_NAME}" >/dev/null 2>&1 || true' INT TERM
+  docker logs -f "${CONTAINER_NAME}"
+  # logs -f returns when the container stops; ensure cleanup if logs exits first
+  docker stop "${CONTAINER_NAME}" >/dev/null 2>&1 || true
 fi
