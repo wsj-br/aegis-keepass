@@ -1,13 +1,31 @@
-# Changelog
+# Release 0.1.5
 
-All notable changes to this project are documented in this file.
+UI polish with light/dark themes and logo, safer download flow, dual-stack localhost readiness, and a local pytest suite.
 
-The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
-and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
+## Highlights
 
-## [Unreleased]
+- **Light / dark themes** — Header control cycles System → Light → Dark; default follows the OS (`prefers-color-scheme`), with WCAG AA contrast for CTAs, chips, toasts, and placeholders.
+- **Vault-shield AK logo** — Local favicons and header mark for offline/Docker use (no CDN assets).
+- **Password show/hide** — In-control eye toggle on Aegis and KeePass password fields.
+- **Download progress modal** — Replaces the browser `confirm()` with stepped merge progress (cleanup → apply OTP → build → download); post-download action renamed to **Start new merge**.
+- **No Aegis UUID filter** — Review filter lists matched entries whose KeePass target still lacks an `AegisUUID` marker (first-time links).
+- **Touch and accessibility** — Larger hit targets on coarse pointers, safe-area insets, keyboard-reachable drop zones, filter `aria-pressed`, and Escape + focus trap in modals.
+- **Ready-before-open** — Compose and start scripts bind both `127.0.0.1` and `::1`, and wait for `/health` before opening or advertising the UI (avoids racing a half-ready server on `localhost`).
+- **Hardened Docker packaging** — Narrower build context, `LICENSE`/`NOTICES` in the image, Compose drops all capabilities plus `no-new-privileges`.
+- **Pytest suite** — Library unit tests and Flask API/integration tests with synthetic Aegis/KeePass fixtures generated at runtime.
 
-## [0.1.5] - 2026-08-05
+## Docker
+
+```bash
+docker pull ghcr.io/wsj-br/aegis-keepass:0.1.5
+docker run --rm -p 127.0.0.1:8580:8580 ghcr.io/wsj-br/aegis-keepass:0.1.5
+```
+
+Open [http://127.0.0.1:8580](http://127.0.0.1:8580).
+
+Start scripts are also attached as downloadable assets on the [GitHub Release](https://github.com/wsj-br/aegis-keepass/releases/tag/v0.1.5).
+
+## Changes
 
 ### Added
 - Upload password fields include an in-control show/hide toggle (eye icon) for Aegis and KeePass passwords.
@@ -40,38 +58,14 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - Password field text now stays on the shared UI font stack when shown or hidden (browsers were swapping in a monospace face).
 - Upload process steps no longer crash in `finally` after a failed decrypt/open that already destroyed the session (`pending_*` buffers may already be wiped).
 
-## [0.1.4] - 2026-07-14
+---
 
-### Added
-- `scripts/update-notices.sh` regenerates the repo-root `NOTICES` file from `requirements.txt` via `pip-licenses`.
-- Added a `LICENSE` file to the repo root for the GPL-3.0 license text.
+## Provided start scripts to run the tool locally
 
-## [0.1.3] - 2026-07-14
+| OS                                    | Script                         |
+|---------------------------------------|--------------------------------|
+| Windows (PowerShell) + Docker Desktop | `aegis-keepass-start.ps1`      |
+| Windows (PowerShell) + WSL Containers | `aegis-keepass-start-wslc.ps1` |
+| Linux (Bash)                          | `aegis-keepass-start.sh`       |
 
-### Changed
-- Default listen/host port changed from `8080` to `8580` (Dockerfile, Compose, start scripts, and docs).
-- Docker image base switched from `python:3.12-slim` (Debian) to `python:3.13-alpine` for a smaller OS surface and fewer reported CVEs.
-- Release workflow now emits SLSA provenance (`mode=max`) and an SPDX SBOM on multi-arch GHCR images.
-
-### Added
-- `dev/DEVEL.md` notes for Alpine / Python 3.13 image base, Docker Scout attestation expectations, and why the copyleft policy may still flag the image (`pykeepass` GPL-3.0 and Alpine GPL components).
-
-## [0.1.2] - 2026-07-14
-
-### Added
-- One-command container start scripts at repo root: `aegis-keepass-start.sh` (Linux/macOS), `aegis-keepass-start.ps1` (Docker Desktop), and `aegis-keepass-start-wslc.ps1` (WSL Containers / `wslc`).
-- `scripts/release.sh` attaches the three start scripts as GitHub Release assets (`releases/latest/download/...`).
-
-## [0.1.1] - 2026-07-12
-
-### Added
-- Developer guide at `dev/DEVEL.md` (environment setup, build, test, release).
-- Agent instructions at `AGENT.md` requiring changelog updates for meaningful changes.
-- Step 3 download completion view after saving the merged database: header advances to Download, with a summary of total KeePass entries, entries with OTP, updated count, and cleaned count, plus an End session button; the review toolbar and entry table are hidden on this screen.
-
-### Fixed
-- Slow KeePass database opening on large vaults: `entries_from_db` no longer runs repeated pykeepass XPath tree scans per entry (recycle-bin lookup, group path, and string fields are read in a single pass via lxml ancestor traversal).
-
-### Changed
-- After download, the review page shows the completion summary instead of auto-redirecting to upload; the user returns to upload only when they click End session.
-- Gunicorn worker request timeout increased from 120s to 300s in `Dockerfile` to accommodate large-database unlock and load on slow hosts.
+See [README.md](https://github.com/wsj-br/aegis-keepass/blob/main/README.md) for more details.
