@@ -13,11 +13,10 @@ dist/
 *.egg-info/
 .tox/
 
-# VCS / editor / design tooling
+# VCS / editor
 .git/
 .github/
 .cursor/
-.impeccable/
 
 # Non-runtime tree (image only needs app + lib + wsgi + deps + notices)
 tests/

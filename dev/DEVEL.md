@@ -78,7 +78,7 @@ After changing Python dependencies, refresh third-party license text at the repo
 ./scripts/update-notices.sh
 ```
 
-That writes `NOTICES` from a temporary venv with `requirements.txt` via `[pip-licenses](https://pypi.org/project/pip-licenses/)` (PyPI packages), plus fixed Alpine base-image and Impeccable (Apache-2.0) attribution sections.
+That writes `NOTICES` from a temporary venv with `requirements.txt` via `[pip-licenses](https://pypi.org/project/pip-licenses/)` (PyPI packages), plus a fixed Alpine base-image attribution section.
 
 Deactivate the venv when finished:
 

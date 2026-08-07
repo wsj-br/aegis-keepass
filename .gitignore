@@ -20,7 +20,6 @@ dist/
 
 # User uploads and secrets (never commit)
 *.json
-!.impeccable/design.json
 *.kdbx
 *.key
 *.keyx
