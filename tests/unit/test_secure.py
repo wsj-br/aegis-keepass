@@ -2,7 +2,10 @@
 
 from __future__ import annotations
 
-from app.secure import SecureBytes, WipeRegistry
+import os
+import tempfile
+
+from app.secure import EncryptedSpillStore, SecureBytes, WipeRegistry
 from app.session import SessionStore
 
 
@@ -35,6 +38,22 @@ class TestSecureBytes:
         assert len(buf) == 0
 
 
+class TestEncryptedSpillStore:
+    def test_create_uses_platform_tempdir(self):
+        spill = EncryptedSpillStore.create()
+        try:
+            assert spill._temp_dir.startswith(tempfile.gettempdir())
+            assert os.path.isdir(spill._temp_dir)
+            path = spill.store('probe', b'hello-spill')
+            assert os.path.isfile(path)
+            loaded = spill.load(path)
+            assert bytes(loaded) == b'hello-spill'
+            loaded.wipe()
+        finally:
+            spill.wipe()
+            assert not os.path.isdir(spill._temp_dir)
+
+
 class TestSessionStore:
     def test_create_get_destroy(self):
         store = SessionStore(timeout_seconds=3600)
@@ -45,6 +64,20 @@ class TestSessionStore:
         session.aegis_password = SecureBytes("pw", registry=session.wipe_registry)
         store.destroy(sid)
         assert store.get(sid) is None
+
+    def test_find_with_pending_download(self):
+        store = SessionStore(timeout_seconds=3600)
+        empty = store.create()
+        ready = store.create()
+        ready.pending_download = SecureBytes(b'kdbx-bytes', registry=ready.wipe_registry)
+
+        found = store.find_with_pending_download()
+        assert found is ready
+        assert found is not empty
+
+        store.destroy(empty.session_id)
+        store.destroy(ready.session_id)
+        assert store.find_with_pending_download() is None
 
     def test_timeout_purges(self, monkeypatch):
         store = SessionStore(timeout_seconds=1)

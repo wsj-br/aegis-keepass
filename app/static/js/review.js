@@ -749,34 +749,52 @@ async function runSavePipeline() {
         saveProgress.setStep('build', 'done', 'Merged database ready.');
 
         saveProgress.setStep('download', 'active');
-        const resp = await fetch('/api/save/download', { method: 'POST' });
-        if (!resp.ok) {
-            const err = await resp.json().catch(() => ({}));
-            throw new Error(err.error || 'Download failed');
+
+        let completeSummary;
+        if (window.AK_DESKTOP && window.pywebview && window.pywebview.api) {
+            const res = await window.pywebview.api.download_merged('keepass-merged.kdbx');
+            if (!res || !res.success) {
+                throw new Error((res && res.error) || 'Download failed');
+            }
+            completeSummary = res.summary || {
+                total: '0',
+                otp: '0',
+                updated: '0',
+                cleaned: '0',
+            };
+            saveProgress.setStep('download', 'done', 'Saved. Session wiped.');
+        } else {
+            const resp = await fetch('/api/save/download', { method: 'POST' });
+            if (!resp.ok) {
+                const err = await resp.json().catch(() => ({}));
+                throw new Error(err.error || 'Download failed');
+            }
+
+            const blob = await resp.blob();
+            const url = URL.createObjectURL(blob);
+            const a = document.createElement('a');
+            a.href = url;
+            a.download = 'keepass-merged.kdbx';
+            document.body.appendChild(a);
+            a.click();
+            a.remove();
+            URL.revokeObjectURL(url);
+
+            completeSummary = {
+                total: resp.headers.get('X-Total-Entries') || '0',
+                otp: resp.headers.get('X-Otp-Entries') || '0',
+                updated: resp.headers.get('X-Updated-Count') || '0',
+                cleaned: resp.headers.get('X-Cleaned-Count') || '0',
+            };
+            saveProgress.setStep('download', 'done', 'Download started. Session wiped.');
         }
 
-        const blob = await resp.blob();
-        const url = URL.createObjectURL(blob);
-        const a = document.createElement('a');
-        a.href = url;
-        a.download = 'keepass-merged.kdbx';
-        document.body.appendChild(a);
-        a.click();
-        a.remove();
-        URL.revokeObjectURL(url);
-
-        saveProgress.setStep('download', 'done', 'Download started. Session wiped.');
         saveProgress.busy = false;
         saveProgress.overlay.classList.remove('busy');
         closeDialog(document.getElementById('save-modal'));
         saveProgress.resetConfirmControls();
 
-        showCompleteView({
-            total: resp.headers.get('X-Total-Entries') || '0',
-            otp: resp.headers.get('X-Otp-Entries') || '0',
-            updated: resp.headers.get('X-Updated-Count') || '0',
-            cleaned: resp.headers.get('X-Cleaned-Count') || '0',
-        });
+        showCompleteView(completeSummary);
     } catch (err) {
         const active = saveProgress.list.querySelector('.progress-step.active');
         const stepId = active ? active.dataset.step : 'download';

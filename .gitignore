@@ -15,6 +15,9 @@ pytest-cache-files-*/
 .coverage
 htmlcov/
 dist/
+build/
+*.spec.bak
+packaging/__pycache__/
 *.egg-info/
 .tox/
 

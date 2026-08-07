@@ -90,7 +90,20 @@ All scripts pull `ghcr.io/wsj-br/aegis-keepass:latest` and start it on [http://1
 
 Useful options: `--detach` / `-Detach`, `--port 9090` / `-Port 9090`, `--tag 0.1.1` / `-Tag 0.1.1`, `--open` / `-Open`. Run with `--help` / `-Help` for the full list.
 
+### Desktop app (no Docker)
 
+Optional standalone executables (same UI, native window via pywebview) are attached to each [GitHub Release](https://github.com/wsj-br/aegis-keepass/releases/latest). Docker remains the primary distribution path.
+
+| Platform | Asset |
+|----------|-------|
+| Windows x64 | [`aegis-keepass-<ver>-windows-x64.zip`](https://github.com/wsj-br/aegis-keepass/releases/latest) |
+| Linux x64 | [`aegis-keepass-<ver>-linux-x64.tar.gz`](https://github.com/wsj-br/aegis-keepass/releases/latest) |
+| Linux arm64 | [`aegis-keepass-<ver>-linux-arm64.tar.gz`](https://github.com/wsj-br/aegis-keepass/releases/latest) |
+| macOS (universal2) | [`aegis-keepass-<ver>-macos-universal2.zip`](https://github.com/wsj-br/aegis-keepass/releases/latest) |
+
+Replace `<ver>` with the release version (for example `0.1.5`), or browse the latest release page for exact filenames.
+
+**Linux note:** the binary still needs WebKitGTK on the host (e.g. `gir1.2-webkit2-4.1` / `libwebkit2gtk-4.1-0` on Debian/Ubuntu). **Windows note:** Edge WebView2 Runtime is required (usually already installed on Windows 10/11).
 
 ### Run it manually
 

@@ -7,6 +7,14 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+### Added
+- Optional desktop shell (`desktop_main.py` + pywebview + Waitress) that opens the existing Flask UI in a native window without Docker.
+- Per-OS PyInstaller packaging and CI (`.github/workflows/desktop-release.yml`) producing Windows x64, Linux x64, Linux arm64, and macOS universal2 release assets.
+- Desktop download path uses a native Save dialog via `window.pywebview.api.download_merged` (web/Docker browser download unchanged).
+
+### Changed
+- Encrypted upload spill temp directories now use the platform default temp location instead of hardcoding `/tmp` (Windows-safe).
+
 ### Removed
 - Removed Impeccable design-skill artifacts (`.impeccable/`) and attribution from `NOTICES` / `scripts/update-notices.sh`, plus related ignore and doc references.
 

@@ -13,8 +13,11 @@ set -euo pipefail
 # the tag is recreated at the current HEAD, then pushed — so you can fix a
 # mistaken tag or re-run the release after new commits.
 #
-# Publishing the release triggers .github/workflows/docker-release.yml, which
-# builds multi-arch Docker images and pushes them to ghcr.io.
+# Publishing the release triggers:
+#   - .github/workflows/docker-release.yml — multi-arch Docker images → ghcr.io
+#   - .github/workflows/desktop-release.yml — Windows/Linux/macOS desktop
+#     executables attached to the same GitHub Release (this script does not
+#     build or upload those; CI uploads them independently after publish).
 #
 # Usage:
 #   ./scripts/release.sh
@@ -166,7 +169,12 @@ fi
 echo "Release created successfully: ${TAG}"
 echo "Start scripts published as release assets (also at:"
 echo "  https://github.com/wsj-br/aegis-keepass/releases/latest/download/<script-name>)"
-
+echo ""
+echo "CI will also build and attach desktop executables via desktop-release.yml:"
+echo "  aegis-keepass-${VERSION}-windows-x64.zip"
+echo "  aegis-keepass-${VERSION}-linux-x64.tar.gz"
+echo "  aegis-keepass-${VERSION}-linux-arm64.tar.gz"
+echo "  aegis-keepass-${VERSION}-macos-universal2.zip"
 echo ""
 echo "See the progress at the GitHub repository https://github.com/wsj-br/aegis-keepass/actions"
 echo ""

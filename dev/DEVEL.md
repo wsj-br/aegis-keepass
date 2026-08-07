@@ -70,7 +70,7 @@ pip install --upgrade pip
 pip install -r requirements.txt -r requirements-dev.txt
 ```
 
-Runtime dependencies are listed in `requirements.txt` (Flask, cryptography, RapidFuzz, Gunicorn, pykeepass). Test tools (`pytest`) are in `requirements-dev.txt`.
+Runtime dependencies are listed in `requirements.txt` (Flask, cryptography, RapidFuzz, Gunicorn, pykeepass). Test tools (`pytest`) are in `requirements-dev.txt`. Desktop shell deps (`pywebview`, `waitress`, `pyinstaller`) are in `requirements-desktop.txt` and are **not** installed into the Docker image.
 
 After changing Python dependencies, refresh third-party license text at the repo root:
 
@@ -90,7 +90,7 @@ deactivate
 
 ## Build / run
 
-This project is a Python Flask app. There is no separate compile step for application code. “Build” means installing Python packages locally and/or building the Docker image.
+This project is a Python Flask app. There is no separate compile step for application code. “Build” means installing Python packages locally and/or building the Docker image. Optional desktop executables are built with PyInstaller (see [Desktop builds](#desktop-builds)).
 
 ### Local (venv + Gunicorn)
 
@@ -161,6 +161,41 @@ The published image uses `python:3.13-alpine` (musl). Local development can stay
 Release builds attach **SLSA provenance** (`mode=max`) and an **SPDX SBOM** via `[.github/workflows/docker-release.yml](../.github/workflows/docker-release.yml)` so Docker Scout’s supply-chain attestation policy can pass.
 
 Alpine lowers the OS CVE and package surface versus Debian slim. Scout’s **copyleft** policy is still expected to flag the image: Alpine ships GPL components (e.g. BusyBox), and the app depends on `pykeepass` **(GPL-3.0)**. That is accepted; do not chase a copyleft-policy PASS by rewriting the KeePass stack.
+
+### Desktop builds
+
+Optional no-Docker distribution: a pywebview window around the same Flask UI, packaged with PyInstaller. Docker remains the primary path; desktop artifacts are additional GitHub Release assets.
+
+**Dev run (no packaging):**
+
+```bash
+source .venv/bin/activate
+pip install -r requirements.txt -r requirements-desktop.txt
+# Linux also needs WebKitGTK, e.g.:
+#   sudo apt-get install -y gir1.2-webkit2-4.1 gir1.2-gtk-3.0 libwebkit2gtk-4.1-dev
+python desktop_main.py
+```
+
+`desktop_main.py` sets `AK_DESKTOP=1`, starts Waitress on loopback, and opens a native window. Download uses a native Save dialog via `window.pywebview.api.download_merged`.
+
+**Local package:**
+
+```bash
+./packaging/build-desktop.sh
+```
+
+See [`packaging/README.md`](../packaging/README.md) for OS prerequisites and artifact layout.
+
+**CI / release artifacts:** publishing a GitHub Release (via `scripts/release.sh`) triggers [`.github/workflows/desktop-release.yml`](../.github/workflows/desktop-release.yml), which builds on native runners and uploads:
+
+| Artifact | Runner |
+|----------|--------|
+| `aegis-keepass-<ver>-windows-x64.zip` | `windows-latest` |
+| `aegis-keepass-<ver>-linux-x64.tar.gz` | `ubuntu-latest` |
+| `aegis-keepass-<ver>-linux-arm64.tar.gz` | `ubuntu-24.04-arm` |
+| `aegis-keepass-<ver>-macos-universal2.zip` | `macos-14` |
+
+`scripts/release.sh` only attaches the Docker start scripts; the desktop workflow uploads executables to the same release independently.
 
 ## Test
 
@@ -280,12 +315,13 @@ Confirm the prerequisites listed in the prompt (version bump, notes file, clean 
   - Creates a GitHub Release with the notes file
   - Attaches start scripts as release assets:
   `aegis-keepass-start.sh`, `aegis-keepass-start.ps1`, `aegis-keepass-start-wslc.ps1`
-  - CI then builds and publishes Docker images
+  - CI then builds and publishes Docker images (`docker-release.yml`) and desktop executables (`desktop-release.yml`)
    After publish, assets are available at:
    `https://github.com/wsj-br/aegis-keepass/releases/latest/download/<script-name>`
 6. **Watch CI**:
   - Actions: [https://github.com/wsj-br/aegis-keepass/actions](https://github.com/wsj-br/aegis-keepass/actions)
   - Confirm the image appears on GHCR
+  - Confirm desktop zip/tar.gz assets appear on the GitHub Release
 
 
 
@@ -322,15 +358,19 @@ docker pull ghcr.io/wsj-br/aegis-keepass:latest
 | `app/`                                          | Flask application (routes, templates, static assets)              |
 | `aegis_keepass_lib.py`                          | Parsing, decryption, matching, KeePass updates                    |
 | `wsgi.py`                                       | Gunicorn entry point                                              |
+| `desktop_main.py`                               | Desktop entrypoint (Waitress + pywebview)                         |
 | `requirements.txt`                              | Python dependencies                                               |
+| `requirements-desktop.txt`                      | Desktop shell deps (pywebview, waitress, pyinstaller)             |
+| `packaging/`                                    | PyInstaller spec, local build script, packaging notes             |
 | `Dockerfile` / `docker-compose.yml`             | Container image and local Compose stack                           |
 | `app/_version.py`                               | Version source of truth                                           |
 | `aegis-keepass-start.sh` / `.ps1` / `-wslc.ps1` | One-command container start; attached to GitHub Releases          |
-| `scripts/release.sh`                            | GitHub Release + Docker CI trigger (includes start-script assets) |
+| `scripts/release.sh`                            | GitHub Release + Docker/desktop CI trigger (start-script assets)  |
 | `release-notes/`                                | Per-version release notes consumed by `release.sh`                |
 | `dev/release-new-version-prompt.md`             | Agent prompt for preparing release notes and changelog            |
 | `dev/CHANGELOG.md`                              | Running change log; source for release notes                      |
 | `.github/workflows/docker-release.yml`          | Multi-arch image build/push to GHCR                               |
+| `.github/workflows/desktop-release.yml`         | Per-OS PyInstaller builds attached to the GitHub Release          |
 
 
 

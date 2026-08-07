@@ -77,6 +77,7 @@
     </footer>
 
     <div class="toast" id="toast" role="status" aria-live="polite"></div>
+    <script>window.AK_DESKTOP = {{ desktop_mode|default(false)|tojson }};</script>
     <script src="{{ url_for('static', filename='js/theme.js') }}"></script>
     <script src="{{ url_for('static', filename='js/toast.js') }}"></script>
     {% block scripts %}{% endblock %}

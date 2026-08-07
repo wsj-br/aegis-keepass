@@ -131,6 +131,21 @@ class SessionStore:
         if session is not None:
             session.wipe()
 
+    def find_with_pending_download(self) -> Optional[SessionData]:
+        """Return the first active session that has a built download ready.
+
+        Used by the desktop shell (single-user) to save via a native dialog.
+        """
+        with self._lock:
+            self._purge_expired_locked()
+            for session in self._sessions.values():
+                if session._wiped:
+                    continue
+                if session.pending_download is not None:
+                    session.touch()
+                    return session
+        return None
+
     def _purge_expired_locked(self) -> None:
         now = time.time()
         expired = [

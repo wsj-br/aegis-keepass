@@ -103,6 +103,9 @@ app/
   static/js/             ← upload.js, review.js (fetch calls to /api/*)
   static/css/app.css     ← Styles
 wsgi.py                  ← Gunicorn entry: create_app()
+desktop_main.py          ← Desktop entry: Waitress + pywebview shell
+app/desktop_api.py       ← JS bridge (native Save dialog for merged .kdbx)
+packaging/               ← PyInstaller spec and local build helper
 ```
 
 | Task | Primary files |
@@ -114,6 +117,7 @@ wsgi.py                  ← Gunicorn entry: create_app()
 | Review UI, manual links, download | `app/routes/review.py`, `app/templates/review.html`, `app/static/js/review.js` |
 | Upload UI and client-side checks | `app/templates/upload.html`, `app/static/js/upload.js` |
 | Session timeout, state, wipe on end | `app/session.py`, `app/secure.py` |
+| Desktop shell / packaging | `desktop_main.py`, `app/desktop_api.py`, `packaging/`, `requirements-desktop.txt` |
 | New HTTP route or API | Relevant blueprint in `app/routes/`, register in `app/__init__.py` if adding a blueprint |
 | Config / env defaults | `app/__init__.py`, `docker-compose.yml`, document in `README.md` |
 | Version string (footer, releases) | `app/_version.py` only |
@@ -129,7 +133,7 @@ wsgi.py                  ← Gunicorn entry: create_app()
 3. **Session model** — state is **in-memory per worker**. Run Gunicorn with **`--workers 1`** locally and in Docker. Do not assume shared storage across workers or restarts.
 4. **API + UI together** — JSON endpoints under `/api/*` are consumed by `app/static/js/*.js`. When changing request/response shape, update both the route and the matching JS.
 5. **Templates** — extend `base.html`; version and GitHub link come from the context processor in `app/__init__.py`.
-6. **Dependencies** — add runtime packages to `requirements.txt` and test tools to `requirements-dev.txt`; rebuild Docker (`docker compose up --build`) to pick runtime deps up in containers.
+6. **Dependencies** — add runtime packages to `requirements.txt` and test tools to `requirements-dev.txt`; rebuild Docker (`docker compose up --build`) to pick runtime deps up in containers. Desktop-only packages go in `requirements-desktop.txt` (not installed in the Docker image).
 7. **Security-sensitive code** — never log passwords, decrypted vault JSON, or `.kdbx` bytes. Prefer `SecureBytes` over plain `str`/`bytes` for credentials and uploads.
 
 ## Development environment
@@ -183,7 +187,7 @@ Tests live under `tests/` (unit + Flask integration). Fixtures generate syntheti
 With venv activated, from repo root:
 
 ```bash
-python -m compileall -q aegis_keepass_lib.py app wsgi.py
+python -m compileall -q aegis_keepass_lib.py app wsgi.py desktop_main.py
 python -c "from app import create_app; create_app(); print('OK')"
 ```
 

@@ -140,7 +140,8 @@ class EncryptedSpillStore:
     @classmethod
     def create(cls) -> EncryptedSpillStore:
         key = bytearray(secrets.token_bytes(32))
-        temp_dir = tempfile.mkdtemp(prefix='ak_', dir='/tmp')
+        # Use the platform temp directory (%TEMP% on Windows, /tmp elsewhere).
+        temp_dir = tempfile.mkdtemp(prefix='ak_')
         return cls(key, temp_dir)
 
     def store(self, name: str, data: bytes) -> str:
