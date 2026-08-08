@@ -2,18 +2,44 @@
     const STORAGE_KEY = 'ak-theme';
     const PREFS = ['system', 'light', 'dark'];
 
-    function getPreference() {
+    // pywebview/WebKitGTK may lack localStorage; keep an in-memory fallback.
+    let memoryPref = null;
+
+    function readStoredPreference() {
         try {
+            if (typeof localStorage === 'undefined') return null;
             const stored = localStorage.getItem(STORAGE_KEY);
-            if (PREFS.includes(stored)) return stored;
+            return PREFS.includes(stored) ? stored : null;
+        } catch (_) {
+            return null;
+        }
+    }
+
+    function writeStoredPreference(pref) {
+        try {
+            if (typeof localStorage === 'undefined') return;
+            localStorage.setItem(STORAGE_KEY, pref);
         } catch (_) {
             /* ignore */
         }
-        return 'system';
+    }
+
+    function getPreference() {
+        const attr = document.documentElement.getAttribute('data-theme-pref');
+        if (PREFS.includes(attr)) return attr;
+        if (PREFS.includes(memoryPref)) return memoryPref;
+        return readStoredPreference() || 'system';
     }
 
     function resolveTheme(pref) {
         if (pref === 'light' || pref === 'dark') return pref;
+        // Desktop shell injects host OS theme; WebKitGTK matchMedia is unreliable.
+        if (window.AK_SYSTEM_THEME === 'light' || window.AK_SYSTEM_THEME === 'dark') {
+            return window.AK_SYSTEM_THEME;
+        }
+        if (window.AK_DESKTOP) {
+            return 'dark';
+        }
         try {
             if (window.matchMedia('(prefers-color-scheme: light)').matches) return 'light';
             if (window.matchMedia('(prefers-color-scheme: dark)').matches) return 'dark';
@@ -23,27 +49,40 @@
         return 'dark';
     }
 
+    function notifyDesktopNativeTheme(resolved) {
+        if (!window.AK_DESKTOP) return;
+        const api = window.pywebview && window.pywebview.api;
+        if (!api || typeof api.set_prefer_dark !== 'function') return;
+        try {
+            const result = api.set_prefer_dark(resolved !== 'light');
+            if (result && typeof result.then === 'function') {
+                result.catch(function () { /* ignore */ });
+            }
+        } catch (_) {
+            /* ignore */
+        }
+    }
+
     function applyTheme(pref) {
         const theme = resolveTheme(pref);
         document.documentElement.setAttribute('data-theme', theme);
         document.documentElement.setAttribute('data-theme-pref', pref);
+        notifyDesktopNativeTheme(theme);
         return theme;
     }
 
     function setPreference(pref) {
         if (!PREFS.includes(pref)) pref = 'system';
-        try {
-            localStorage.setItem(STORAGE_KEY, pref);
-        } catch (_) {
-            /* ignore */
-        }
+        memoryPref = pref;
+        writeStoredPreference(pref);
         applyTheme(pref);
         syncToggle(pref);
     }
 
     function cyclePreference() {
         const current = getPreference();
-        const next = PREFS[(PREFS.indexOf(current) + 1) % PREFS.length];
+        const idx = PREFS.indexOf(current);
+        const next = PREFS[((idx < 0 ? 0 : idx) + 1) % PREFS.length];
         setPreference(next);
     }
 
@@ -71,6 +110,7 @@
 
     function init() {
         const pref = getPreference();
+        memoryPref = pref;
         applyTheme(pref);
         syncToggle(pref);
 

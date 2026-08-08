@@ -103,7 +103,7 @@ Optional standalone executables (same UI, native window via pywebview) are attac
 
 Replace `<ver>` with the release version (for example `0.1.5`), or browse the latest release page for exact filenames.
 
-**Linux note:** the binary still needs WebKitGTK on the host (e.g. `gir1.2-webkit2-4.1` / `libwebkit2gtk-4.1-0` on Debian/Ubuntu). **Windows note:** Edge WebView2 Runtime is required (usually already installed on Windows 10/11).
+**Linux note:** the binary does not ship GTK/ICU/WebKit libraries or icon themes; install them on the host, e.g. `sudo apt-get install -y gir1.2-gtk-3.0 gir1.2-webkit2-4.1 libgtk-3-0 libwebkit2gtk-4.1-0`. **Windows note:** Edge WebView2 Runtime is required (usually already installed on Windows 10/11).
 
 ### Run it manually
 

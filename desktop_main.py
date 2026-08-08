@@ -41,6 +41,10 @@ def main() -> int:
 
     from app import create_app
     from app.desktop_api import DesktopApi
+    from app.system_theme import prepare_desktop_system_theme
+
+    # WebKitGTK often reports light for prefers-color-scheme; align with the OS first.
+    prepare_desktop_system_theme()
 
     app = create_app()
     port = _free_loopback_port()
@@ -56,8 +60,8 @@ def main() -> int:
         'Aegis-KeePass OTP Sync',
         url,
         js_api=api,
-        width=1100,
-        height=800,
+        width=940,
+        height=640,
         min_size=(800, 600),
     )
     webview.start()

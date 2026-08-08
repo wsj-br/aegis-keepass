@@ -23,8 +23,19 @@ def test_upload_page_loads(client):
 
 def test_desktop_mode_flag_injected(monkeypatch):
     monkeypatch.setenv("AK_DESKTOP", "1")
+    monkeypatch.setenv("AK_SYSTEM_THEME", "dark")
     application = create_app()
     client = application.test_client()
     resp = client.get("/")
     assert resp.status_code == 200
     assert b"window.AK_DESKTOP = true" in resp.data
+    assert b'data-desktop="1"' in resp.data
+    assert b"window.AK_SYSTEM_THEME = \"dark\"" in resp.data or b"window.AK_SYSTEM_THEME = 'dark'" in resp.data or b'AK_SYSTEM_THEME = "dark"' in resp.data
+
+
+def test_desktop_system_theme_defaults_dark_when_undetected(monkeypatch):
+    monkeypatch.setenv("AK_DESKTOP", "1")
+    monkeypatch.delenv("AK_SYSTEM_THEME", raising=False)
+    monkeypatch.setattr("app.detect_system_theme", lambda: None)
+    application = create_app()
+    assert application.config["SYSTEM_THEME"] == "dark"

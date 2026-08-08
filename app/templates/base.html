@@ -1,5 +1,5 @@
 <!DOCTYPE html>
-<html lang="en">
+<html lang="en"{% if desktop_mode %} data-desktop="1"{% endif %}>
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
@@ -7,10 +7,23 @@
     <script>
     (function () {
         try {
-            var pref = localStorage.getItem('ak-theme') || 'system';
+            window.AK_SYSTEM_THEME = {{ system_theme|default(none)|tojson }};
+            // pywebview/WebKitGTK may not expose localStorage; treat that as no saved pref.
+            var pref = 'system';
+            try {
+                if (typeof localStorage !== 'undefined') {
+                    var stored = localStorage.getItem('ak-theme');
+                    if (stored === 'system' || stored === 'light' || stored === 'dark') pref = stored;
+                }
+            } catch (storageErr) { /* ignore */ }
             var theme = 'dark';
             if (pref === 'light' || pref === 'dark') {
                 theme = pref;
+            } else if (window.AK_SYSTEM_THEME === 'light' || window.AK_SYSTEM_THEME === 'dark') {
+                // Desktop/WSL: host OS theme (WebKitGTK matchMedia is often wrong).
+                theme = window.AK_SYSTEM_THEME;
+            } else if ({{ desktop_mode|default(false)|tojson }}) {
+                theme = 'dark';
             } else {
                 if (window.matchMedia('(prefers-color-scheme: light)').matches) theme = 'light';
                 else if (window.matchMedia('(prefers-color-scheme: dark)').matches) theme = 'dark';
@@ -77,7 +90,12 @@
     </footer>
 
     <div class="toast" id="toast" role="status" aria-live="polite"></div>
-    <script>window.AK_DESKTOP = {{ desktop_mode|default(false)|tojson }};</script>
+    <script>
+    window.AK_DESKTOP = {{ desktop_mode|default(false)|tojson }};
+    if (typeof window.AK_SYSTEM_THEME === 'undefined') {
+        window.AK_SYSTEM_THEME = {{ system_theme|default(none)|tojson }};
+    }
+    </script>
     <script src="{{ url_for('static', filename='js/theme.js') }}"></script>
     <script src="{{ url_for('static', filename='js/toast.js') }}"></script>
     {% block scripts %}{% endblock %}

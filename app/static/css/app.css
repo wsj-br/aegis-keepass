@@ -359,7 +359,15 @@ body {
     line-height: var(--lh-body);
 }
 
-.upload-card { max-width: 760px; margin: 0 auto; }
+.upload-card { max-width: 760px; margin: 0 auto; width: 100%; }
+
+/* Vertically center the upload card in the leftover viewport below the header. */
+main.container:has(> .upload-card) {
+    display: flex;
+    flex-direction: column;
+    justify-content: center;
+    min-height: calc(100vh - 12rem);
+}
 
 .upload-form { padding: 0 var(--space-xl) var(--space-xl); }
 
@@ -1375,4 +1383,230 @@ tr.modified { box-shadow: inset 3px 0 0 var(--warning); }
         transition: none;
         transform: none;
     }
+}
+
+/*
+ * Desktop shell (pywebview, default 1100×750): compact type/spacing so the
+ * upload screen fits without a page scrollbar; review scrolls inside the table.
+ */
+html[data-desktop="1"] {
+    --fs-brand: 1.05rem;
+    --fs-complete: 1.2rem;
+    --fs-title: 1.1rem;
+    --fs-modal: 1.05rem;
+    --fs-body: 0.9rem;
+    --fs-control: 0.82rem;
+    --fs-input: 0.85rem;
+    --fs-label: 0.8rem;
+    --fs-hint: 0.72rem;
+    --fs-compact: 0.72rem;
+    --fs-micro: 0.7rem;
+    --fs-badge: 0.68rem;
+    --fs-tiny: 0.66rem;
+    --space-md: 10px;
+    --space-lg: 14px;
+    --space-xl: 14px;
+    --space-2xl: 16px;
+    --lh-body: 1.4;
+    height: 100%;
+}
+
+html[data-desktop="1"] body {
+    height: 100%;
+    min-height: 0;
+    display: flex;
+    flex-direction: column;
+    overflow: hidden;
+}
+
+html[data-desktop="1"] .site-header {
+    flex-shrink: 0;
+    margin-bottom: var(--space-sm);
+}
+
+html[data-desktop="1"] .header-inner {
+    padding-top: 6px;
+    padding-bottom: 6px;
+    column-gap: var(--space-md);
+}
+
+html[data-desktop="1"] .brand {
+    gap: var(--space-sm);
+}
+
+html[data-desktop="1"] .brand-mark {
+    width: 32px;
+    height: 32px;
+}
+
+html[data-desktop="1"] .subtitle {
+    margin-top: 0;
+    font-size: var(--fs-hint);
+}
+
+html[data-desktop="1"] .theme-toggle {
+    min-height: 32px;
+    padding: 4px 8px;
+}
+
+html[data-desktop="1"] .step-num {
+    width: 20px;
+    height: 20px;
+}
+
+html[data-desktop="1"] main.container {
+    flex: 1 1 auto;
+    min-height: 0;
+    overflow: hidden;
+    display: flex;
+    flex-direction: column;
+    padding-bottom: var(--space-sm);
+}
+
+html[data-desktop="1"] main.container:has(> .upload-card) {
+    /* Fill the shell flex slot; center the card in that band. */
+    min-height: 0;
+    justify-content: center;
+}
+
+html[data-desktop="1"] .upload-card {
+    flex: 0 0 auto;
+    max-height: 100%;
+}
+
+html[data-desktop="1"] .card-header {
+    padding: var(--space-sm) var(--space-lg) 0;
+}
+
+html[data-desktop="1"] .card-header h2 {
+    margin-bottom: 2px;
+}
+
+html[data-desktop="1"] .card-header p {
+    margin-bottom: 8px;
+    font-size: var(--fs-label);
+}
+
+html[data-desktop="1"] .upload-form {
+    padding: 0 var(--space-lg) var(--space-md);
+}
+
+html[data-desktop="1"] .drop-grid {
+    gap: var(--space-sm);
+    margin-bottom: var(--space-sm);
+}
+
+html[data-desktop="1"] .drop-zone {
+    padding: 8px 10px;
+}
+
+html[data-desktop="1"] .drop-icon {
+    width: 26px;
+    height: 26px;
+    margin-bottom: 2px;
+}
+
+html[data-desktop="1"] .drop-icon svg {
+    width: 18px;
+    height: 18px;
+}
+
+html[data-desktop="1"] .drop-hint {
+    margin-bottom: 2px;
+}
+
+html[data-desktop="1"] .field {
+    margin-bottom: 8px;
+}
+
+html[data-desktop="1"] .field label {
+    margin-bottom: 3px;
+}
+
+html[data-desktop="1"] .password-input,
+html[data-desktop="1"] .search-input {
+    padding: 6px 10px;
+}
+
+html[data-desktop="1"] .btn {
+    padding: 7px 12px;
+}
+
+html[data-desktop="1"] .form-actions {
+    margin-top: 4px;
+}
+
+html[data-desktop="1"] .security-note {
+    margin-top: 8px;
+    padding: 6px 8px;
+    font-size: var(--fs-hint);
+    line-height: 1.3;
+}
+
+html[data-desktop="1"] .upload-progress {
+    margin-top: 6px;
+    padding: 10px 12px;
+}
+
+html[data-desktop="1"] .upload-progress-detail {
+    margin-bottom: 8px;
+}
+
+html[data-desktop="1"] .progress-step {
+    padding: 6px 8px;
+    gap: 8px;
+}
+
+html[data-desktop="1"] .site-footer {
+    flex-shrink: 0;
+    margin-top: 0;
+    padding: 4px 0 var(--space-sm);
+}
+
+html[data-desktop="1"] .footer-inner {
+    gap: var(--space-sm);
+    font-size: var(--fs-hint);
+}
+
+html[data-desktop="1"] #review-workspace {
+    flex: 1 1 auto;
+    min-height: 0;
+    display: flex;
+    flex-direction: column;
+    overflow: hidden;
+}
+
+html[data-desktop="1"] .review-toolbar {
+    flex-shrink: 0;
+    padding: 10px 12px;
+    margin-bottom: 10px;
+}
+
+html[data-desktop="1"] .table-card {
+    flex: 1 1 auto;
+    min-height: 0;
+    display: flex;
+    flex-direction: column;
+}
+
+html[data-desktop="1"] .table-wrap {
+    flex: 1 1 auto;
+    min-height: 0;
+    max-height: none;
+}
+
+html[data-desktop="1"] th,
+html[data-desktop="1"] td {
+    padding: 8px 12px;
+}
+
+html[data-desktop="1"] .complete-card {
+    padding: var(--space-lg);
+}
+
+html[data-desktop="1"] .complete-header p,
+html[data-desktop="1"] .complete-stats,
+html[data-desktop="1"] .complete-actions {
+    margin-top: var(--space-md);
+    margin-bottom: var(--space-md);
 }

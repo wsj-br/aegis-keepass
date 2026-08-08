@@ -171,8 +171,9 @@ Optional no-Docker distribution: a pywebview window around the same Flask UI, pa
 ```bash
 source .venv/bin/activate
 pip install -r requirements.txt -r requirements-desktop.txt
-# Linux also needs WebKitGTK, e.g.:
-#   sudo apt-get install -y gir1.2-webkit2-4.1 gir1.2-gtk-3.0 libwebkit2gtk-4.1-dev
+# Linux host packages (GTK + WebKitGTK; not bundled into the PyInstaller binary):
+#   sudo apt-get install -y gir1.2-gtk-3.0 gir1.2-webkit2-4.1 \
+#     libwebkit2gtk-4.1-dev pkg-config python3-gi
 python desktop_main.py
 ```
 
@@ -184,7 +185,7 @@ python desktop_main.py
 ./packaging/build-desktop.sh
 ```
 
-See [`packaging/README.md`](../packaging/README.md) for OS prerequisites and artifact layout.
+Packaged Linux binaries expect runtime GTK/WebKit on the host (e.g. `libgtk-3-0`, `libwebkit2gtk-4.1-0`, plus matching `gir1.2-*` typelibs). See [`packaging/README.md`](../packaging/README.md) for full OS prerequisites and artifact layout.
 
 **CI / release artifacts:** publishing a GitHub Release (via `scripts/release.sh`) triggers [`.github/workflows/desktop-release.yml`](../.github/workflows/desktop-release.yml), which builds on native runners and uploads:
 

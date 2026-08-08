@@ -14,6 +14,14 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Changed
 - Encrypted upload spill temp directories now use the platform default temp location instead of hardcoding `/tmp` (Windows-safe).
+- Desktop shell default window is 1100×750 with compact spacing/type so the upload UI fits without a page scrollbar (review still scrolls inside the table).
+- Upload card (“Upload your files”) is vertically centered in the available main content area.
+- PyInstaller desktop spec collects only desktop pywebview backends (skips Android/Kivy), includes `app.system_theme`, and excludes unused `setuptools`/`pkg_resources` so the frozen binary starts cleanly.
+- Linux desktop packages omit bundled icon themes/locales and GTK/ICU/WebKit shared libraries (use host packages instead) to cut download size; runtime/package docs list the required `apt` packages.
+
+### Fixed
+- Desktop “System” theme now follows the host OS appearance (including Windows dark mode under WSL); WebKitGTK `prefers-color-scheme` alone was stuck on light. Falls back to dark when the OS preference cannot be detected.
+- Desktop theme toggle now cycles System → Light → Dark reliably when `localStorage` is unavailable in pywebview/WebKitGTK (was stuck after Light).
 
 ### Removed
 - Removed Impeccable design-skill artifacts (`.impeccable/`) and attribution from `NOTICES` / `scripts/update-notices.sh`, plus related ignore and doc references.

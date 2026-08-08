@@ -21,8 +21,9 @@ echo "Using Python: ${PYTHON}"
 
 case "$(uname -s)" in
   Linux*)
-    echo "Note: Linux builds need WebKitGTK at build and runtime."
-    echo "  Debian/Ubuntu: sudo apt-get install -y gir1.2-webkit2-4.1 gir1.2-gtk-3.0 libwebkit2gtk-4.1-dev"
+    echo "Note: Linux desktop needs host GTK + WebKitGTK (not bundled in the binary)."
+    echo "  Run:  sudo apt-get install -y gir1.2-gtk-3.0 gir1.2-webkit2-4.1 libgtk-3-0 libwebkit2gtk-4.1-0"
+    echo "  Build/dev also: libwebkit2gtk-4.1-dev pkg-config python3-gi"
     ;;
   Darwin*)
     echo "Note: macOS build targets universal2 (requires a universal2 Python)."

@@ -8,6 +8,7 @@ import webview
 from flask import Flask
 
 from app.session import SessionStore
+from app.system_theme import apply_gtk_prefer_dark
 
 
 class DesktopApi:
@@ -15,6 +16,11 @@ class DesktopApi:
 
     def __init__(self, app: Flask) -> None:
         self._app = app
+
+    def set_prefer_dark(self, prefer_dark: bool = True) -> Dict[str, Any]:
+        """Align GTK/WebKitGTK chrome with the UI light/dark resolution."""
+        apply_gtk_prefer_dark(bool(prefer_dark))
+        return {'ok': True, 'prefer_dark': bool(prefer_dark)}
 
     def download_merged(self, default_name: str = 'keepass-merged.kdbx') -> Dict[str, Any]:
         """Save the merged database via a native Save dialog, then wipe the session."""
