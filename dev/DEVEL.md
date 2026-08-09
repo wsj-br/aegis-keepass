@@ -72,6 +72,24 @@ pip install -r requirements.txt -r requirements-dev.txt
 
 Runtime dependencies are listed in `requirements.txt` (Flask, cryptography, RapidFuzz, Gunicorn, pykeepass). Test tools (`pytest`) are in `requirements-dev.txt`. Desktop shell deps (`pywebview`, `waitress`, `pyinstaller`) are in `requirements-desktop.txt` and are **not** installed into the Docker image.
 
+### Upgrade packages in an existing venv
+
+Requirements use minimum versions (`>=`), so a plain `pip install -r …` leaves already-installed packages alone if they already satisfy those floors. To pull the latest compatible releases into an existing `.venv`:
+
+```bash
+source .venv/bin/activate
+pip install --upgrade pip
+pip install --upgrade -r requirements.txt -r requirements-dev.txt
+```
+
+For desktop shell / PyInstaller work, also upgrade desktop deps:
+
+```bash
+pip install --upgrade -r requirements-desktop.txt
+```
+
+After bumping runtime packages, refresh `NOTICES` (see below). If you rely on Docker, rebuild so the image picks up the new versions (`docker compose up --build`).
+
 After changing Python dependencies, refresh third-party license text at the repo root:
 
 ```bash

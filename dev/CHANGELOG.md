@@ -13,6 +13,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - Desktop download path uses a native Save dialog via `window.pywebview.api.download_merged` (web/Docker browser download unchanged).
 
 ### Changed
+- Documented upgrading Python packages in an existing venv (`pip install --upgrade -r …`), including desktop deps and Docker rebuild notes, in `dev/DEVEL.md`.
 - Web UI uses the same compact viewport-fit shell as the desktop app on fine pointers (no page scrollbar; table scrolls); touch phones keep a roomier scrollable layout.
 - Increased type sizes on the fine-pointer web compact shell for readability (desktop densified scale unchanged).
 - Encrypted upload spill temp directories now use the platform default temp location instead of hardcoding `/tmp` (Windows-safe).
