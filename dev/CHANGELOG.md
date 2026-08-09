@@ -13,13 +13,19 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - Desktop download path uses a native Save dialog via `window.pywebview.api.download_merged` (web/Docker browser download unchanged).
 
 ### Changed
+- Web UI uses the same compact viewport-fit shell as the desktop app on fine pointers (no page scrollbar; table scrolls); touch phones keep a roomier scrollable layout.
+- Increased type sizes on the fine-pointer web compact shell for readability (desktop densified scale unchanged).
 - Encrypted upload spill temp directories now use the platform default temp location instead of hardcoding `/tmp` (Windows-safe).
-- Desktop shell default window is 1100×750 with compact spacing/type so the upload UI fits without a page scrollbar (review still scrolls inside the table).
-- Upload card (“Upload your files”) is vertically centered in the available main content area.
+- Desktop shell default window is 750×660 (`min_size` 700×600) with a compact app-shell layout so upload and review fit without a page scrollbar (review still scrolls inside the table).
+- Desktop shell densifies upload/review/complete further for 750×660 (resets coarse-pointer 44px targets, hides secondary hints) so views fill the window without a panel scrollbar; only the match table scrolls.
+- Header step rail (Upload → Review → Download) always sits under the brand title row; theme toggle stays on the brand row.
+- Desktop shell uses Read / Save terminology for step 1 and step 3 (and related CTAs); the web UI keeps Upload / Download.
+- Upload, review, and completion surfaces are flat full-bleed panels (no nested content cards); the match table uses denser type, padding, and column widths for the narrower desktop window.
 - PyInstaller desktop spec collects only desktop pywebview backends (skips Android/Kivy), includes `app.system_theme`, and excludes unused `setuptools`/`pkg_resources` so the frozen binary starts cleanly.
 - Linux desktop packages omit bundled icon themes/locales and GTK/ICU/WebKit shared libraries (use host packages instead) to cut download size; runtime/package docs list the required `apt` packages.
 
 ### Fixed
+- Desktop Save dialog uses pywebview `FileDialog.SAVE` instead of the deprecated `SAVE_DIALOG` constant.
 - Desktop “System” theme now follows the host OS appearance (including Windows dark mode under WSL); WebKitGTK `prefers-color-scheme` alone was stuck on light. Falls back to dark when the OS preference cannot be detected.
 - Desktop theme toggle now cycles System → Light → Dark reliably when `localStorage` is unavailable in pywebview/WebKitGTK (was stuck after Light).
 

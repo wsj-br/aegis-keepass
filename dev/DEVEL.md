@@ -177,7 +177,7 @@ pip install -r requirements.txt -r requirements-desktop.txt
 python desktop_main.py
 ```
 
-`desktop_main.py` sets `AK_DESKTOP=1`, starts Waitress on loopback, and opens a native window. Download uses a native Save dialog via `window.pywebview.api.download_merged`.
+`desktop_main.py` sets `AK_DESKTOP=1`, starts Waitress on loopback, and opens a native window at **750×660** (`min_size` 700×600). Download uses a native Save dialog via `window.pywebview.api.download_merged`.
 
 **Local package:**
 

@@ -34,7 +34,7 @@ class DesktopApi:
             return {'error': 'No desktop window available for Save dialog'}
 
         result = windows[0].create_file_dialog(
-            webview.SAVE_DIALOG,
+            webview.FileDialog.SAVE,
             save_filename=default_name or 'keepass-merged.kdbx',
         )
         if not result:

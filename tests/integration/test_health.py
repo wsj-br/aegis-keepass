@@ -39,3 +39,29 @@ def test_desktop_system_theme_defaults_dark_when_undetected(monkeypatch):
     monkeypatch.setattr("app.detect_system_theme", lambda: None)
     application = create_app()
     assert application.config["SYSTEM_THEME"] == "dark"
+
+
+def test_web_uses_upload_download_terminology(client):
+    html = client.get("/").get_data(as_text=True)
+    assert "> Upload<" in html or "> Upload</span>" in html
+    assert "Upload your files" in html
+    assert "Download" in html
+    assert "Read your files" not in html
+
+
+def test_desktop_uses_read_save_terminology(monkeypatch):
+    monkeypatch.setenv("AK_DESKTOP", "1")
+    application = create_app()
+    client = application.test_client()
+    html = client.get("/").get_data(as_text=True)
+    assert "Read your files" in html
+    assert "> Read<" in html or "> Read</span>" in html
+    assert "Save" in html
+    assert "Upload your files" not in html
+    assert "Download merged database" not in html
+    js = client.get("/static/js/upload.js").get_data(as_text=True)
+    assert "Reading files" in js
+    assert "Uploading files to server" in js  # web branch still present
+    review_js = client.get("/static/js/review.js").get_data(as_text=True)
+    assert "Save merged database" in review_js
+    assert "Download merged database" in review_js

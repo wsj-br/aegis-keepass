@@ -200,14 +200,14 @@ async function loadEntries() {
         }
 
         return '<tr class="' + rowClass.trim() + '" data-uuid="' + e.aegis_uuid + '">'
-            + '<td>' + statusBadge + modBadge + '</td>'
-            + '<td><div class="aegis-title-row"><strong>' + escHtml(e.display) + '</strong>'
+            + '<td class="col-status">' + statusBadge + modBadge + '</td>'
+            + '<td class="col-aegis"><div class="aegis-title-row"><strong>' + escHtml(e.display) + '</strong>'
             + '<button type="button" class="info-aegis-btn" data-uuid="' + e.aegis_uuid + '" title="Entry details" aria-label="Entry details">' + INFO_ICON + '</button>'
             + '</div>'
             + '<div class="meta">' + escHtml(e.issuer) + ' / ' + escHtml(e.name) + '</div></td>'
-            + '<td>' + kpCell + '</td>'
-            + '<td>' + matchInfo + '</td>'
-            + '<td class="actions">' + actions + '</td>'
+            + '<td class="col-keepass">' + kpCell + '</td>'
+            + '<td class="col-match">' + matchInfo + '</td>'
+            + '<td class="col-actions actions">' + actions + '</td>'
             + '</tr>';
     }).join('');
 }
@@ -586,6 +586,9 @@ function showCompleteView(summary) {
     document.getElementById('complete-section').hidden = false;
 }
 
+const AK_DESKTOP = !!window.AK_DESKTOP;
+const SAVE_ACTION = AK_DESKTOP ? 'Save merged database' : 'Download merged database';
+
 const SAVE_STEPS = [
     {
         id: 'cleanup',
@@ -604,8 +607,10 @@ const SAVE_STEPS = [
     },
     {
         id: 'download',
-        label: 'Preparing download',
-        detail: 'Sending keepass-merged.kdbx to your browser and wiping the session.',
+        label: AK_DESKTOP ? 'Saving database' : 'Preparing download',
+        detail: AK_DESKTOP
+            ? 'Writing keepass-merged.kdbx and wiping the session.'
+            : 'Sending keepass-merged.kdbx to your browser and wiping the session.',
     },
 ];
 
@@ -626,7 +631,7 @@ class SaveProgress {
     openConfirm() {
         this.busy = false;
         this.overlay.classList.remove('busy');
-        this.title.textContent = 'Download merged database?';
+        this.title.textContent = SAVE_ACTION + '?';
         this.confirmPanel.hidden = false;
         this.progressPanel.hidden = true;
         this.progressPanel.setAttribute('aria-busy', 'false');
@@ -639,7 +644,7 @@ class SaveProgress {
     startProgress() {
         this.busy = true;
         this.overlay.classList.add('busy');
-        this.title.textContent = 'Merging and downloading';
+        this.title.textContent = AK_DESKTOP ? 'Merging and saving' : 'Merging and downloading';
         this.confirmPanel.hidden = true;
         this.progressPanel.hidden = false;
         this.progressPanel.setAttribute('aria-busy', 'true');
@@ -689,12 +694,12 @@ class SaveProgress {
         this.cancelBtn.disabled = false;
         this.confirmBtn.disabled = false;
         this.confirmBtn.textContent = 'Try again';
-        this.title.textContent = 'Download failed';
+        this.title.textContent = AK_DESKTOP ? 'Save failed' : 'Download failed';
         this.confirmBtn.focus();
     }
 
     resetConfirmControls() {
-        this.confirmBtn.textContent = 'Download merged database';
+        this.confirmBtn.textContent = SAVE_ACTION;
     }
 }
 
@@ -754,7 +759,7 @@ async function runSavePipeline() {
         if (window.AK_DESKTOP && window.pywebview && window.pywebview.api) {
             const res = await window.pywebview.api.download_merged('keepass-merged.kdbx');
             if (!res || !res.success) {
-                throw new Error((res && res.error) || 'Download failed');
+                throw new Error((res && res.error) || (AK_DESKTOP ? 'Save failed' : 'Download failed'));
             }
             completeSummary = res.summary || {
                 total: '0',

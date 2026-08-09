@@ -1,20 +1,24 @@
 {% extends "base.html" %}
 
+{% set step_read = 'Read' if desktop_mode else 'Upload' %}
+{% set step_save = 'Save' if desktop_mode else 'Download' %}
+{% set save_action = 'Save merged database' if desktop_mode else 'Download merged database' %}
+
 {% block title %}Review — Aegis-KeePass OTP Sync{% endblock %}
 
 {% block steps %}
 <nav class="step-indicator" aria-label="Progress">
-    <span class="step done" id="step-upload"><span class="step-num">1</span> Upload</span>
+    <span class="step done" id="step-upload"><span class="step-num">1</span> {{ step_read }}</span>
     <span class="step-sep" aria-hidden="true"></span>
     <span class="step active" id="step-review"><span class="step-num">2</span> Review</span>
     <span class="step-sep" aria-hidden="true"></span>
-    <span class="step" id="step-download"><span class="step-num">3</span> Download</span>
+    <span class="step" id="step-download"><span class="step-num">3</span> {{ step_save }}</span>
 </nav>
 {% endblock %}
 
 {% block content %}
 <div id="review-workspace">
-<section class="review-toolbar card" id="review-toolbar">
+<section class="review-toolbar" id="review-toolbar">
     <div class="stats" id="stats">
         <div class="stat-chip"><span class="stat-label">Total</span><strong id="stat-total">-</strong></div>
         <div class="stat-chip stat-success"><span class="stat-label">Matched</span><strong id="stat-matched">-</strong></div>
@@ -38,23 +42,23 @@
             <input type="search" class="search-input" id="aegis-filter" placeholder="Filter Aegis entries…" autocomplete="off">
         </div>
         <div class="toolbar-actions">
-            <button class="btn btn-primary" id="save-btn" type="button">Download merged database</button>
+            <button class="btn btn-primary" id="save-btn" type="button">{{ save_action }}</button>
             <button class="btn btn-secondary" id="end-session-btn" type="button">End session</button>
         </div>
     </div>
 </section>
 
-<section class="card table-card" id="entries-section">
+<section class="table-panel" id="entries-section">
     <div class="table-wrap">
         <table>
             <caption class="visually-hidden">Aegis to KeePass entry matches</caption>
             <thead>
                 <tr>
-                    <th scope="col">Status</th>
-                    <th scope="col">Aegis Entry</th>
-                    <th scope="col">KeePass Entry</th>
-                    <th scope="col">Match Info</th>
-                    <th scope="col">Actions</th>
+                    <th scope="col" class="col-status">Status</th>
+                    <th scope="col" class="col-aegis">Aegis Entry</th>
+                    <th scope="col" class="col-keepass">KeePass Entry</th>
+                    <th scope="col" class="col-match">Match Info</th>
+                    <th scope="col" class="col-actions">Actions</th>
                 </tr>
             </thead>
             <tbody id="entries-body">
@@ -65,9 +69,9 @@
 </section>
 </div>
 
-<section class="card complete-card" id="complete-section" hidden>
+<section class="complete-panel" id="complete-section" hidden>
     <div class="complete-header">
-        <h2>Download complete</h2>
+        <h2>{% if desktop_mode %}Save complete{% else %}Download complete{% endif %}</h2>
         <p><strong>keepass-merged.kdbx</strong> has been saved to your device.</p>
     </div>
     <div class="stats complete-stats" aria-label="Saved database summary">
@@ -123,12 +127,13 @@
 <div class="modal-overlay" id="save-modal" aria-hidden="true">
     <div class="modal modal-save" role="dialog" aria-modal="true" aria-labelledby="save-modal-title">
         <div class="modal-header">
-            <h2 id="save-modal-title">Download merged database?</h2>
+            <h2 id="save-modal-title">{{ save_action }}?</h2>
         </div>
         <div class="modal-body">
             <div id="save-confirm-panel">
                 <p class="save-confirm-copy">
-                    Apply imported OTP secrets to matched KeePass entries and download
+                    Apply imported OTP secrets to matched KeePass entries and
+                    {% if desktop_mode %}save{% else %}download{% endif %}
                     <strong>keepass-merged.kdbx</strong>. This ends the session and securely
                     wipes server memory.
                 </p>
@@ -140,7 +145,7 @@
         </div>
         <div class="modal-footer" id="save-modal-footer">
             <button class="btn btn-secondary" id="save-cancel-btn" type="button">Cancel</button>
-            <button class="btn btn-primary" id="save-confirm-btn" type="button">Download merged database</button>
+            <button class="btn btn-primary" id="save-confirm-btn" type="button">{{ save_action }}</button>
         </div>
     </div>
 </div>
@@ -152,7 +157,9 @@
         </div>
         <div class="modal-body">
             <p class="save-confirm-copy">
-                End the session and wipe all uploaded files, passwords, and match state from memory.
+                End the session and wipe all
+                {% if desktop_mode %}loaded{% else %}uploaded{% endif %}
+                files, passwords, and match state from memory.
                 This cannot be undone.
             </p>
         </div>

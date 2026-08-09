@@ -1,8 +1,12 @@
+const AK_DESKTOP = !!window.AK_DESKTOP;
+
 const UPLOAD_STEPS = [
     {
         id: 'upload',
-        label: 'Uploading files to server',
-        detail: 'Sending your encrypted Aegis backup, KeePass database, and passwords.',
+        label: AK_DESKTOP ? 'Reading files' : 'Uploading files to server',
+        detail: AK_DESKTOP
+            ? 'Loading your encrypted Aegis backup, KeePass database, and passwords.'
+            : 'Sending your encrypted Aegis backup, KeePass database, and passwords.',
     },
     {
         id: 'validate',
@@ -122,7 +126,7 @@ class UploadProgress {
         this.setStep(
             'upload',
             'active',
-            'Uploading files to server (' + pct + '%)…',
+            (AK_DESKTOP ? 'Reading files' : 'Uploading files to server') + ' (' + pct + '%)…',
         );
     }
 }
@@ -164,14 +168,14 @@ function uploadFormData(formData, onProgress) {
                 return;
             }
             const data = xhr.response || {};
-            const err = new Error(data.error || 'Upload failed');
+            const err = new Error(data.error || (AK_DESKTOP ? 'Read failed' : 'Upload failed'));
             err.status = xhr.status;
             err.data = data;
             reject(err);
         });
 
         xhr.addEventListener('error', () => {
-            reject(new Error('Network error during upload'));
+            reject(new Error(AK_DESKTOP ? 'Network error while reading files' : 'Network error during upload'));
         });
 
         xhr.send(formData);
@@ -296,7 +300,7 @@ document.getElementById('upload-form').addEventListener('submit', async (e) => {
         await runProcessingPipeline(body);
     } catch (err) {
         uploadProgress.hide();
-        showToast(err.message || 'Upload failed', 'error');
+        showToast(err.message || (AK_DESKTOP ? 'Read failed' : 'Upload failed'), 'error');
         btn.disabled = false;
         btn.textContent = 'Continue to review';
     }

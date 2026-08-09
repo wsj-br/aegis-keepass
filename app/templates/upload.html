@@ -1,21 +1,24 @@
 {% extends "base.html" %}
 
-{% block title %}Upload — Aegis-KeePass OTP Sync{% endblock %}
+{% set step_read = 'Read' if desktop_mode else 'Upload' %}
+{% set step_save = 'Save' if desktop_mode else 'Download' %}
+
+{% block title %}{{ step_read }} — Aegis-KeePass OTP Sync{% endblock %}
 
 {% block steps %}
 <nav class="step-indicator" aria-label="Progress">
-    <span class="step active"><span class="step-num">1</span> Upload</span>
+    <span class="step active"><span class="step-num">1</span> {{ step_read }}</span>
     <span class="step-sep" aria-hidden="true"></span>
     <span class="step"><span class="step-num">2</span> Review</span>
     <span class="step-sep" aria-hidden="true"></span>
-    <span class="step"><span class="step-num">3</span> Download</span>
+    <span class="step"><span class="step-num">3</span> {{ step_save }}</span>
 </nav>
 {% endblock %}
 
 {% block content %}
-<section class="card upload-card">
-    <div class="card-header">
-        <h2>Upload your files</h2>
+<section class="upload-panel">
+    <div class="panel-header">
+        <h2>{% if desktop_mode %}Read your files{% else %}Upload your files{% endif %}</h2>
         <p>Provide your encrypted Aegis backup and KeePass database. Files are processed in memory and never stored on disk.</p>
     </div>
 
@@ -103,7 +106,9 @@
         </div>
 
         <p class="security-note">
-            Your files and passwords stay in server memory only. Session data is securely wiped when you download the merged database or end the session.
+            Your files and passwords stay in server memory only. Session data is securely wiped when you
+            {% if desktop_mode %}save{% else %}download{% endif %}
+            the merged database or end the session.
         </p>
     </form>
 

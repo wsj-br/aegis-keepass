@@ -60,9 +60,9 @@ def main() -> int:
         'Aegis-KeePass OTP Sync',
         url,
         js_api=api,
-        width=940,
-        height=640,
-        min_size=(800, 600),
+        width=750,
+        height=660,
+        min_size=(700, 600),
     )
     webview.start()
 

@@ -82,7 +82,12 @@ def api_upload():
     keyfile_bytes = keyfile.read() if keyfile and keyfile.filename else None
 
     if not aegis_bytes or not keepass_bytes:
-        return jsonify({'error': 'Uploaded files cannot be empty'}), 400
+        empty_msg = (
+            'Selected files cannot be empty'
+            if current_app.config.get('DESKTOP_MODE')
+            else 'Uploaded files cannot be empty'
+        )
+        return jsonify({'error': empty_msg}), 400
 
     if not AegisDecryptor.is_encrypted_bytes(aegis_bytes):
         return jsonify({'error': 'Only encrypted Aegis backup files are supported'}), 400
@@ -115,7 +120,11 @@ def api_upload():
     response = jsonify({
         'success': True,
         'step': 'upload',
-        'message': 'Files uploaded and validated',
+        'message': (
+            'Files loaded and validated'
+            if current_app.config.get('DESKTOP_MODE')
+            else 'Files uploaded and validated'
+        ),
     })
     return set_session_cookie(response, session.session_id)
 
