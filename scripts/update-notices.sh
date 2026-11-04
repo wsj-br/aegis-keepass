@@ -1,12 +1,8 @@
 #!/usr/bin/env bash
 set -euo pipefail
 
-# Generate / update the repo-root NOTICES file.
-#
-# Includes a fixed notice for:
-#   - Alpine base image (Dockerfile uses python:*-alpine)
-# then Python dependency notices from requirements.txt via pip-licenses
-# (https://pypi.org/project/pip-licenses/).
+# Generate / update the repo-root NOTICES file from requirements.txt
+# via pip-licenses (https://pypi.org/project/pip-licenses/).
 #
 # Usage (from repository root):
 #   ./scripts/update-notices.sh
@@ -131,48 +127,10 @@ PY
 Third-party notices for Aegis-KeePass OTP Sync
 ==============================================
 
-This file lists third-party notices for:
-  1. The Alpine Linux base used by the published Docker image (Dockerfile)
-  2. Python packages from requirements.txt (and transitive deps), via pip-licenses
-
-Regenerate with:
-
-  ./scripts/update-notices.sh
+This file lists third-party notices for Python packages from requirements.txt
+(and their dependencies), generated with pip-licenses.
 
 Generated: $(date -u +"%Y-%m-%dT%H:%M:%SZ")
-
---------------------------------------------------------------------------------
-
-Alpine Linux (Docker base image)
-python:*-alpine (official Docker Hub image)
-Mixed (distribution + package licenses)
-
-The published container image (\`ghcr.io/wsj-br/aegis-keepass\`) is built \`FROM
-python:*-alpine\`, which is based on Alpine Linux.
-
-Alpine Linux is a community-developed Linux distribution built around musl libc
-and BusyBox. See: https://www.alpinelinux.org/about/
-
-Key components commonly present in Alpine / python-alpine images include (not
-exhaustive; package set varies by tag):
-
-  - Alpine aports / packaging infrastructure — often MIT / OSI-permissive for
-    Alpine project material; individual packages keep their own licenses.
-  - musl libc — MIT
-    https://musl.libc.org/
-  - BusyBox — GPL-2.0-only
-    https://busybox.net/license.html
-  - apk-tools and other Alpine packages — see each package license
-
-For the exact package list and licenses inside a built image:
-
-  docker run --rm --entrypoint sh IMAGE -c 'apk info -v && apk info -a busybox'
-
-Package index: https://pkgs.alpinelinux.org/
-
-This section is a distribution attribution for the Docker base OS. It does not
-reproduce every Alpine system package license text (that set is defined by the
-base image tag, not by this repository's requirements.txt).
 
 --------------------------------------------------------------------------------
 

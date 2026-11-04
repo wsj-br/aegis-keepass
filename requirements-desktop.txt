@@ -1,5 +1,4 @@
-# Desktop shell dependencies (install alongside requirements.txt for local/desktop builds).
-# Not used by the Docker image.
+# Desktop shell dependencies (install alongside requirements.txt).
 pywebview>=5.4
 waitress>=3.0
 pyinstaller>=6.10

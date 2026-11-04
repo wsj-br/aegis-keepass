@@ -4,31 +4,26 @@ This document covers setting up a development environment, cloning the repositor
 
 ## Prerequisites
 
-
-| Tool                            | Purpose                                 | Notes                            |
-| ------------------------------- | --------------------------------------- | -------------------------------- |
-| **Git**                         | Clone and version control               |                                  |
-| **Python 3.12+**                | Local runs                              | `python3 --version`              |
-| **Docker** + **Docker Compose** | Container builds and local Compose runs | Image base: `python:3.13-alpine` |
-| **GitHub CLI (**`gh`**)**       | Create GitHub Releases                  | Required only for publishing     |
-
+| Tool | Purpose | Notes |
+|------|---------|-------|
+| **Git** | Clone and version control | |
+| **Python 3.12+** | Local runs and tests | `python3 --version` |
+| **GitHub CLI (`gh`)** | Create GitHub Releases | Required only for publishing |
 
 Optional but recommended:
 
 - A virtual environment tool (`venv`, included with Python)
 - SSH key or HTTPS credentials for GitHub
 
-
+Desktop development also needs the system WebView libraries described in [packaging/README.md](../packaging/README.md) (GTK/WebKit on Linux, WebView2 on Windows, nothing extra on macOS).
 
 ### Install tools (Ubuntu / Debian)
 
 ```bash
 sudo apt update
-sudo apt install -y git python3 python3-venv python3-pip
-
-# Docker Engine + Compose plugin (see https://docs.docker.com/engine/install/)
-# Example for Ubuntu — follow the official docs for your distro:
-#   https://docs.docker.com/engine/install/ubuntu/
+sudo apt install -y git python3 python3-venv python3-pip \
+  gir1.2-gtk-3.0 gir1.2-webkit2-4.1 libwebkit2gtk-4.1-dev \
+  pkg-config python3-gi
 
 # GitHub CLI (see https://cli.github.com/)
 # Example:
@@ -40,8 +35,6 @@ Authenticate the GitHub CLI before releasing:
 ```bash
 gh auth login
 ```
-
-
 
 ## Clone the repository
 
@@ -57,8 +50,6 @@ git clone https://github.com/wsj-br/aegis-keepass.git
 cd aegis-keepass
 ```
 
-
-
 ## Install the development environment
 
 From the repository root:
@@ -67,156 +58,86 @@ From the repository root:
 python3 -m venv .venv
 source .venv/bin/activate
 pip install --upgrade pip
-pip install -r requirements.txt -r requirements-dev.txt
+pip install -r requirements.txt -r requirements-dev.txt -r requirements-desktop.txt
 ```
 
-Runtime dependencies are listed in `requirements.txt` (Flask, cryptography, RapidFuzz, Gunicorn, pykeepass). Test tools (`pytest`) are in `requirements-dev.txt`. Desktop shell deps (`pywebview`, `waitress`, `pyinstaller`) are in `requirements-desktop.txt` and are **not** installed into the Docker image.
+Runtime dependencies are listed in `requirements.txt` (Flask, cryptography, RapidFuzz, pykeepass). Test tools (`pytest`) are in `requirements-dev.txt`. The desktop shell (`pywebview`, `waitress`, `pyinstaller`) is in `requirements-desktop.txt`.
 
 ### Upgrade packages in an existing venv
 
-Requirements use minimum versions (`>=`), so a plain `pip install -r …` leaves already-installed packages alone if they already satisfy those floors. To pull the latest compatible releases into an existing `.venv`:
+Requirements use minimum versions (`>=`), so a plain `pip install -r …` leaves already-installed packages alone if they already satisfy those floors. To upgrade pip and the latest releases allowed by every `requirements*.txt` file:
 
 ```bash
-source .venv/bin/activate
-pip install --upgrade pip
-pip install --upgrade -r requirements.txt -r requirements-dev.txt
+./scripts/upgrade-dependencies.sh
 ```
 
-For desktop shell / PyInstaller work, also upgrade desktop deps:
+That uses `.venv` when it exists, upgrades pip, setuptools, and wheel, then upgrades `requirements.txt`, `requirements-dev.txt`, and `requirements-desktop.txt`. It regenerates `NOTICES` from `requirements.txt` afterward. Pass `--skip-notices` to leave `NOTICES` unchanged, or `--python=PATH` to target another interpreter. The script does not replace the Python installation itself.
+
+## Version
+
+`app/_version.py` is the only copy of the release version. The window footer, the macOS bundle version, and CI read it from there.
 
 ```bash
-pip install --upgrade -r requirements-desktop.txt
+./scripts/version
+./scripts/version 0.2.0
 ```
 
-After bumping runtime packages, refresh `NOTICES` (see below). If you rely on Docker, rebuild so the image picks up the new versions (`docker compose up --build`).
-
-After changing Python dependencies, refresh third-party license text at the repo root:
-
-```bash
-./scripts/update-notices.sh
-```
-
-That writes `NOTICES` from a temporary venv with `requirements.txt` via `[pip-licenses](https://pypi.org/project/pip-licenses/)` (PyPI packages), plus a fixed Alpine base-image attribution section.
-
-Deactivate the venv when finished:
-
-```bash
-deactivate
-```
-
-
+The argument must be `MAJOR.MINOR.PATCH` (digits only). The script does not edit the changelog or past release notes.
 
 ## Build / run
 
-This project is a Python Flask app. There is no separate compile step for application code. “Build” means installing Python packages locally and/or building the Docker image. Optional desktop executables are built with PyInstaller (see [Desktop builds](#desktop-builds)).
+There is no separate compile step for application code. Day-to-day work uses `scripts/dev`. Release binaries are built with PyInstaller.
 
-### Local (venv + Gunicorn)
+### Desktop window
 
 ```bash
-source .venv/bin/activate
-gunicorn --bind 127.0.0.1:8580 --bind '[::1]:8580' --workers 1 --timeout 120 wsgi:app
+./scripts/dev
 ```
 
-Open [http://127.0.0.1:8580](http://127.0.0.1:8580) (or `http://localhost:8580` — both loopbacks are bound).
-
-Use a **single worker** so in-memory session state stays consistent across requests. Wait until the log shows `Booting worker` before loading the page; opening the URL the instant the process starts can race the worker import.
+`desktop_main.py` sets `AK_DESKTOP=1`, starts Waitress on loopback, and opens a native window at **750×660** (`min_size` 700×600). Save uses a native Save dialog via `window.pywebview.api.download_merged`.
 
 Useful environment variables (optional):
 
+| Variable | Default | Description |
+|----------|---------|-------------|
+| `SESSION_TIMEOUT_SECONDS` | `1800` | Idle session timeout |
+| `MAX_IN_MEMORY_UPLOAD_BYTES` | `33554432` | In-RAM upload threshold (32 MB) |
+| `MAX_UPLOAD_BYTES` | `52428800` | Maximum upload size (50 MB) |
+| `FLASK_SECRET_KEY` | *(random per start)* | Set explicitly for stable cookies across restarts |
 
-| Variable                     | Default              | Description                                       |
-| ---------------------------- | -------------------- | ------------------------------------------------- |
-| `SESSION_TIMEOUT_SECONDS`    | `1800`               | Idle session timeout                              |
-| `MAX_IN_MEMORY_UPLOAD_BYTES` | `33554432`           | In-RAM upload threshold (32 MB)                   |
-| `MAX_UPLOAD_BYTES`           | `52428800`           | Maximum upload size (50 MB)                       |
-| `FLASK_SECRET_KEY`           | *(random per start)* | Set explicitly for stable cookies across restarts |
+### Loopback HTTP (no window)
 
-
-Example:
-
-```bash
-export FLASK_SECRET_KEY=dev-secret
-gunicorn --bind 127.0.0.1:8580 --bind '[::1]:8580' --workers 1 --timeout 120 wsgi:app
-```
-
-
-
-### Docker Compose (recommended smoke environment)
+Use this when you want a browser or `curl` against the same app:
 
 ```bash
-docker compose up --build --wait && docker compose logs -f
+export FLASK_SECRET_KEY=dev-secret   # optional
+./scripts/dev --http
 ```
 
-`--wait` blocks until the health check passes, then `logs -f` streams Gunicorn output (`Listening at` / `Booting worker`). Note: `--wait` always runs detached, so logs do not appear during the wait itself.
+Open [http://127.0.0.1:8580](http://127.0.0.1:8580). The process is a single Waitress server. It also binds `::1` when the host allows it. Pass `--port 9090` to use another port.
 
-Alternatively, attach immediately (logs stream from the first line; open the UI only after `Booting worker`):
+This mode does not set `AK_DESKTOP`, so the pages say Upload / Download and the browser saves the merged file. The packaged app and `./scripts/dev` (no flag) say Read / Save and use the native dialog.
+
+### Package a binary
 
 ```bash
-docker compose up --build
+./scripts/build-desktop.sh
 ```
 
-Docker publishes the host port before Gunicorn is listening, so opening the UI too early can show a connection reset; a refresh after ready works. Compose maps both `127.0.0.1` and `::1` on port 8580.
-
-Open [http://127.0.0.1:8580](http://127.0.0.1:8580). Stop with `Ctrl+C` or:
-
-```bash
-docker compose down
-```
-
-
-
-### Docker image only
-
-```bash
-docker build -t aegis-keepass:dev .
-docker run --rm -p 127.0.0.1:8580:8580 -p '[::1]:8580:8580' aegis-keepass:dev
-```
-
-The published image uses `python:3.13-alpine` (musl). Local development can stay on Python 3.12+; the image Python may be newer.
-
-### Docker Scout / image policy notes
-
-Release builds attach **SLSA provenance** (`mode=max`) and an **SPDX SBOM** via `[.github/workflows/docker-release.yml](../.github/workflows/docker-release.yml)` so Docker Scout’s supply-chain attestation policy can pass.
-
-Alpine lowers the OS CVE and package surface versus Debian slim. Scout’s **copyleft** policy is still expected to flag the image: Alpine ships GPL components (e.g. BusyBox), and the app depends on `pykeepass` **(GPL-3.0)**. That is accepted; do not chase a copyleft-policy PASS by rewriting the KeePass stack.
-
-### Desktop builds
-
-Optional no-Docker distribution: a pywebview window around the same Flask UI, packaged with PyInstaller. Docker remains the primary path; desktop artifacts are additional GitHub Release assets.
-
-**Dev run (no packaging):**
-
-```bash
-source .venv/bin/activate
-pip install -r requirements.txt -r requirements-desktop.txt
-# Linux host packages (GTK + WebKitGTK; libraries are not bundled):
-#   sudo apt-get install -y gir1.2-gtk-3.0 gir1.2-webkit2-4.1 \
-#     libwebkit2gtk-4.1-dev pkg-config python3-gi
-# python3-gi is picked up automatically when its ABI matches the venv.
-# Otherwise: pip install 'PyGObject>=3.48,<3.52'
-python desktop_main.py
-```
-
-`desktop_main.py` sets `AK_DESKTOP=1`, starts Waitress on loopback, and opens a native window at **750×660** (`min_size` 700×600). Download uses a native Save dialog via `window.pywebview.api.download_merged`.
-
-**Local package:**
-
-```bash
-./packaging/build-desktop.sh
-```
-
-Packaged Linux binaries expect runtime GTK/WebKit on the host (e.g. `libgtk-3-0`, `libwebkit2gtk-4.1-0`, plus matching `gir1.2-*` typelibs). See [`packaging/README.md`](../packaging/README.md) for full OS prerequisites and artifact layout.
+On Linux and Windows this writes `dist/aegis-keepass` (or `.exe`). On macOS it also writes a drag-to-Applications DMG under `dist/`. See [packaging/README.md](../packaging/README.md).
 
 **CI / release artifacts:** publishing a GitHub Release (via `scripts/release.sh`) triggers [`.github/workflows/desktop-release.yml`](../.github/workflows/desktop-release.yml), which builds on native runners and uploads:
 
 | Artifact | Runner |
 |----------|--------|
-| `aegis-keepass-<ver>-windows-x64.zip` | `windows-latest` |
-| `aegis-keepass-<ver>-linux-x64.tar.gz` | `ubuntu-latest` |
+| `aegis-keepass-<ver>-linux-amd64.tar.gz` | `ubuntu-latest` |
 | `aegis-keepass-<ver>-linux-arm64.tar.gz` | `ubuntu-24.04-arm` |
-| `aegis-keepass-<ver>-macos-universal2.zip` | `macos-14` |
+| `aegis-keepass-<ver>-macos-intel.dmg` | `macos-15-intel` |
+| `aegis-keepass-<ver>-macos-arm64.dmg` | `macos-15` |
+| `aegis-keepass-<ver>-windows-x64.zip` | `windows-latest` |
+| `aegis-keepass-<ver>-windows-arm64.zip` | `windows-11-arm` |
 
-`scripts/release.sh` only attaches the Docker start scripts; the desktop workflow uploads executables to the same release independently.
+macOS artifacts include a `.dmg.sha256` file. `scripts/release.sh` does not upload binaries; the workflow does, after the release is published.
 
 ## Test
 
@@ -243,123 +164,89 @@ pytest tests/integration
 With the venv activated:
 
 ```bash
-python -m compileall -q aegis_keepass_lib.py app wsgi.py
+python -m compileall -q aegis_keepass_lib.py app desktop_main.py
 python -c "from app import create_app; create_app(); print('OK')"
 ```
 
-### 3. Health endpoint
+### 3. App is serving
 
-With the app running (venv or Docker):
+With `./scripts/dev --http` running:
 
 ```bash
-curl -sf http://127.0.0.1:8580/health && echo
+curl -sf -o /dev/null -w '%{http_code}\n' http://127.0.0.1:8580/
 ```
 
 Expect HTTP 200.
 
 ### 4. Manual smoke test (UI)
 
-1. Start the app (`gunicorn` or `docker compose up --build --wait && docker compose logs -f`).
-2. Open [http://127.0.0.1:8580](http://127.0.0.1:8580).
-3. Upload an **encrypted** Aegis `.json` backup and a KeePass `.kdbx` (use copies of real files; keep originals safe).
+1. Start the app (`./scripts/dev` or `./scripts/dev --http`).
+2. Open the window, or [http://127.0.0.1:8580](http://127.0.0.1:8580) for `--http`.
+3. Read an **encrypted** Aegis `.json` backup and a KeePass `.kdbx` (use copies of real files; keep originals safe).
 4. Enter passwords (and keyfile if required).
 5. Confirm matches on the review page; try a manual link if needed.
-6. Download `keepass-merged.kdbx` and open it in KeePassXC / KeePass to verify TOTP fields.
-7. Confirm **Start new merge** (after download) or **End session** (during review) returns you to upload with the session cleared.
-
-
-
-### 5. Container health check
-
-After Compose is up and healthy:
-
-```bash
-docker compose ps
-```
-
-Confirm the service is healthy (the image defines a `HEALTHCHECK` against `/health`).
+6. Save `keepass-merged.kdbx` and open it in KeePassXC / KeePass to verify TOTP fields.
+7. Confirm **Start new merge** (after save) or **End session** (during review) returns you to the first screen with the session cleared.
 
 ## Publish a new release
 
-Version is defined in a single place: `[app/_version.py](../app/_version.py)`.
+Version is defined in a single place: [`app/_version.py`](../app/_version.py).
 
+| Layer | Format | Example |
+|-------|--------|---------|
+| Git tag / GitHub Release | `vX.Y.Z` | `v0.1.6` |
+| `app/_version.py` / UI footer | `X.Y.Z` | `0.1.6` |
+| Release asset filenames | `aegis-keepass-X.Y.Z-<platform>` | `aegis-keepass-0.1.6-linux-amd64.tar.gz` |
 
-| Layer                         | Format   | Example  |
-| ----------------------------- | -------- | -------- |
-| Git tag / GitHub Release      | `vX.Y.Z` | `v0.1.0` |
-| Docker image tag              | `X.Y.Z`  | `0.1.0`  |
-| `app/_version.py` / UI footer | `X.Y.Z`  | `0.1.0`  |
-
-
-Publishing a GitHub Release triggers `[.github/workflows/docker-release.yml](../.github/workflows/docker-release.yml)`, which builds multi-arch images (`linux/amd64`, `linux/arm64`) from `python:3.13-alpine`, attaches SLSA provenance and an SPDX SBOM, and pushes them to `ghcr.io/wsj-br/aegis-keepass`.
+Publishing a GitHub Release triggers [`.github/workflows/desktop-release.yml`](../.github/workflows/desktop-release.yml), which builds the six desktop artifacts and attaches them to that release.
 
 ### Preparing release notes
 
-Before running the release script, use `[dev/release-new-version-prompt.md](release-new-version-prompt.md)` when preparing a new version. Paste that prompt into Cursor (or another agent) to:
+Before running the release script, use [`dev/release-new-version-prompt.md`](release-new-version-prompt.md) when preparing a new version. Paste that prompt into Cursor (or another agent) to:
 
 - Create `release-notes/RELEASE_NOTES_X.Y.Z.md` from the `[Unreleased]` section in `dev/CHANGELOG.md`
 - Move changelog entries into a versioned section with today's date
-- Match the format of prior release notes (highlights, Docker pull/run snippet)
+- Match the format of prior release notes (highlights plus an Install section that names the six assets)
 
 Confirm the prerequisites listed in the prompt (version bump, notes file, clean tree) before continuing with the checklist below.
 
 ### Release checklist
 
-1. **Bump the version** in `app/_version.py`:
-  ```python
-   __version__ = "X.Y.Z"
-  ```
-2. **Write release notes** at `release-notes/RELEASE_NOTES_X.Y.Z.md`. Use `[dev/release-new-version-prompt.md](release-new-version-prompt.md)` for the full workflow (changelog → notes file, format, and checklist).
+1. **Bump the version**:
+   ```bash
+   ./scripts/version X.Y.Z
+   ```
+2. **Write release notes** at `release-notes/RELEASE_NOTES_X.Y.Z.md`. Use [`dev/release-new-version-prompt.md`](release-new-version-prompt.md) for the full workflow (changelog → notes file, format, and checklist).
 3. **Commit** on a clean tree (usually on `main`):
-  ```bash
+   ```bash
    git status
-   git add app/_version.py release-notes/RELEASE_NOTES_X.Y.Z.md
+   git add app/_version.py release-notes/RELEASE_NOTES_X.Y.Z.md dev/CHANGELOG.md
    git commit -m "Release X.Y.Z"
    git push origin HEAD
-  ```
+   ```
 4. **Validate** the release script (no side effects):
-  ```bash
+   ```bash
    ./scripts/release.sh --dry-run
-  ```
+   ```
 5. **Publish**:
-  ```bash
+   ```bash
    ./scripts/release.sh
-  ```
+   ```
    Requirements for the script:
-  - `gh` authenticated (`gh auth login`)
-  - Clean working tree (or pass `--verify-clean=false`)
-  - `app/_version.py` and matching `release-notes/RELEASE_NOTES_<version>.md`
-  - Remote `origin` configured
+   - `gh` authenticated (`gh auth login`)
+   - Clean working tree (or pass `--verify-clean=false`)
+   - `app/_version.py` and matching `release-notes/RELEASE_NOTES_<version>.md`
+   - Remote `origin` configured
+
    What the script does:
-  - Reads version from `app/_version.py`
-  - Creates annotated tag `vX.Y.Z` at `HEAD` (recreates tag/release if they already exist)
-  - Creates a GitHub Release with the notes file
-  - Attaches start scripts as release assets:
-  `aegis-keepass-start.sh`, `aegis-keepass-start.ps1`, `aegis-keepass-start-wslc.ps1`
-  - CI then builds and publishes Docker images (`docker-release.yml`) and desktop executables (`desktop-release.yml`)
-   After publish, assets are available at:
-   `https://github.com/wsj-br/aegis-keepass/releases/latest/download/<script-name>`
+   - Reads the version with `scripts/version`
+   - Creates annotated tag `vX.Y.Z` at `HEAD` (recreates tag/release if they already exist)
+   - Creates a GitHub Release with the notes file
+   - CI then builds and attaches the desktop artifacts (`desktop-release.yml`)
+
 6. **Watch CI**:
-  - Actions: [https://github.com/wsj-br/aegis-keepass/actions](https://github.com/wsj-br/aegis-keepass/actions)
-  - Confirm the image appears on GHCR
-  - Confirm desktop zip/tar.gz assets appear on the GitHub Release
-
-
-
-### Pull and verify the published image
-
-```bash
-docker pull ghcr.io/wsj-br/aegis-keepass:X.Y.Z
-docker run --rm -p 127.0.0.1:8580:8580 ghcr.io/wsj-br/aegis-keepass:X.Y.Z
-```
-
-Or use `latest` when the release was tagged as the newest:
-
-```bash
-docker pull ghcr.io/wsj-br/aegis-keepass:latest
-```
-
-
+   - Actions: https://github.com/wsj-br/aegis-keepass/actions
+   - Confirm the six archives (and the two macOS `.dmg.sha256` files) appear on the GitHub Release
 
 ### Release script options
 
@@ -369,45 +256,39 @@ docker pull ghcr.io/wsj-br/aegis-keepass:latest
 ./scripts/release.sh --verify-clean=false   # skip clean-tree check (use carefully)
 ```
 
-
-
 ## Project layout (developer-oriented)
 
-
-| Path                                            | Purpose                                                           |
-| ----------------------------------------------- | ----------------------------------------------------------------- |
-| `app/`                                          | Flask application (routes, templates, static assets)              |
-| `aegis_keepass_lib.py`                          | Parsing, decryption, matching, KeePass updates                    |
-| `wsgi.py`                                       | Gunicorn entry point                                              |
-| `desktop_main.py`                               | Desktop entrypoint (Waitress + pywebview)                         |
-| `requirements.txt`                              | Python dependencies                                               |
-| `requirements-desktop.txt`                      | Desktop shell deps (pywebview, waitress, pyinstaller)             |
-| `packaging/`                                    | PyInstaller spec, local build script, packaging notes             |
-| `Dockerfile` / `docker-compose.yml`             | Container image and local Compose stack                           |
-| `app/_version.py`                               | Version source of truth                                           |
-| `aegis-keepass-start.sh` / `.ps1` / `-wslc.ps1` | One-command container start; attached to GitHub Releases          |
-| `scripts/release.sh`                            | GitHub Release + Docker/desktop CI trigger (start-script assets)  |
-| `release-notes/`                                | Per-version release notes consumed by `release.sh`                |
-| `dev/release-new-version-prompt.md`             | Agent prompt for preparing release notes and changelog            |
-| `dev/CHANGELOG.md`                              | Running change log; source for release notes                      |
-| `.github/workflows/docker-release.yml`          | Multi-arch image build/push to GHCR                               |
-| `.github/workflows/desktop-release.yml`         | Per-OS PyInstaller builds attached to the GitHub Release          |
-
-
-
+| Path | Purpose |
+|------|---------|
+| `app/` | Flask application (routes, templates, static assets) |
+| `aegis_keepass_lib.py` | Parsing, decryption, matching, KeePass updates |
+| `desktop_main.py` | Desktop entrypoint (Waitress + pywebview) |
+| `requirements.txt` | Python dependencies |
+| `requirements-desktop.txt` | Desktop shell deps (pywebview, waitress, pyinstaller) |
+| `packaging/aegis-keepass.spec` | PyInstaller spec |
+| `packaging/dmg-background.tiff` | Arrow background for the macOS DMG |
+| `app/_version.py` | Version source of truth |
+| `scripts/version` | Print or set `app/_version.py` |
+| `scripts/dev` | Local desktop window, or `--http` loopback server |
+| `scripts/build-desktop.sh` | PyInstaller build; DMG on macOS |
+| `scripts/release.sh` | GitHub Release that triggers desktop CI |
+| `scripts/update-notices.sh` | Regenerate root `NOTICES` |
+| `scripts/upgrade-dependencies.sh` | Upgrade pip and every `requirements*.txt` package |
+| `release-notes/` | Per-version release notes consumed by `release.sh` |
+| `dev/release-new-version-prompt.md` | Agent prompt for preparing release notes and changelog |
+| `dev/CHANGELOG.md` | Running change log; source for release notes |
+| `.github/workflows/desktop-release.yml` | Six-arch PyInstaller builds attached to the GitHub Release |
 
 ## Security notes for developers
 
-- Prefer localhost binding (`127.0.0.1:8580`) when testing with real backups.
+- Prefer the desktop window or `127.0.0.1` when testing with real backups.
 - Do not commit real Aegis backups, `.kdbx` files, passwords, or keyfiles.
 - Memory wiping is best-effort; treat local process memory as sensitive during sessions.
-
-
 
 ## Workflow
 
 ```
-                    upload
+                    read
 ┌─────────────────┐         ┌─────────────────┐
 │  Aegis Backup   │         │  KeePass .kdbx  │
 │  (encrypted)    │         │                 │
@@ -416,14 +297,13 @@ docker pull ghcr.io/wsj-br/aegis-keepass:latest
          └─────────────┬─────────────┘
                        ▼
            ┌──────────────────────┐
-           │  Web App (Docker)    │
+           │  Desktop app         │
            │  match · apply       │
            └──────────┬───────────┘
-                      │ download (browser)
+                      │ save
                       ▼
            ┌────────────────────────┐
            │  keepass-merged.kdbx   │
            │  (replace in KeePass)  │
            └────────────────────────┘
 ```
-

@@ -1,17 +1,20 @@
-"""Integration tests for the health endpoint."""
+"""Integration tests for the upload page and desktop shell flags."""
 
 from __future__ import annotations
+
+import logging
 
 from app import create_app
 
 
-def test_health_ok(client):
+def test_waitress_queue_warning_is_quiet():
+    create_app()
+    assert logging.getLogger("waitress.queue").level == logging.ERROR
+
+
+def test_health_endpoint_is_gone(client):
     resp = client.get("/health")
-    assert resp.status_code == 200
-    data = resp.get_json()
-    assert data["status"] == "ok"
-    assert "version" in data
-    assert data.get("crypto") is True
+    assert resp.status_code == 404
 
 
 def test_upload_page_loads(client):

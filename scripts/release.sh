@@ -1,28 +1,25 @@
 #!/usr/bin/env bash
 set -euo pipefail
 
-# Creates a GitHub release from local CLI using:
+# Creates a GitHub release from the local CLI using:
 # - tag/title: v<app/_version.py version>
 # - notes file: release-notes/RELEASE_NOTES_<version>.md
-# - start scripts attached as release assets:
-#     aegis-keepass-start.sh
-#     aegis-keepass-start.ps1
-#     aegis-keepass-start-wslc.ps1
 #
 # If the tag (or a GitHub release for it) already exists, it is removed and
 # the tag is recreated at the current HEAD, then pushed — so you can fix a
 # mistaken tag or re-run the release after new commits.
 #
-# Publishing the release triggers:
-#   - .github/workflows/docker-release.yml — multi-arch Docker images → ghcr.io
-#   - .github/workflows/desktop-release.yml — Windows/Linux/macOS desktop
-#     executables attached to the same GitHub Release (this script does not
-#     build or upload those; CI uploads them independently after publish).
+# Publishing the release triggers .github/workflows/desktop-release.yml, which
+# builds the desktop binaries and attaches them to this release. This script
+# does not build or upload those artifacts.
 #
 # Usage:
 #   ./scripts/release.sh
 #   ./scripts/release.sh --dry-run
 #   ./scripts/release.sh --verify-clean=false
+
+ROOT="$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)"
+cd "$ROOT"
 
 VERIFY_CLEAN=true
 DRY_RUN=false
@@ -43,7 +40,7 @@ Options:
 
 If tag v<version> or a GitHub release for it already exists, they are removed
 and the tag is recreated at HEAD, then pushed to origin. Publishing the release
-triggers the Docker CI workflow on GitHub Actions.
+triggers the desktop build workflow on GitHub Actions.
 EOF
       exit 0
       ;;
@@ -72,23 +69,13 @@ require_cmd git
 git rev-parse --is-inside-work-tree >/dev/null 2>&1 || fail "Not inside a git repository."
 gh auth status >/dev/null 2>&1 || fail "GitHub CLI is not authenticated. Run: gh auth login"
 
-[[ -f app/_version.py ]] || fail "app/_version.py not found in current directory."
-VERSION="$(grep -oP '__version__\s*=\s*"\K[^"]+' app/_version.py 2>/dev/null || true)"
-[[ -n "${VERSION:-}" ]] || fail "Could not read __version__ from app/_version.py."
+VERSION="$("${ROOT}/scripts/version")"
+[[ -n "${VERSION:-}" ]] || fail "Could not read the application version."
 
 TAG="v${VERSION}"
 NOTES_FILE="release-notes/RELEASE_NOTES_${VERSION}.md"
 
 [[ -f "$NOTES_FILE" ]] || fail "Release notes file not found: $NOTES_FILE"
-
-START_ASSETS=(
-  aegis-keepass-start.sh
-  aegis-keepass-start.ps1
-  aegis-keepass-start-wslc.ps1
-)
-for asset in "${START_ASSETS[@]}"; do
-  [[ -f "$asset" ]] || fail "Release asset not found: $asset"
-done
 
 if [[ "$VERIFY_CLEAN" == "true" ]] && [[ -n "$(git status --porcelain)" ]]; then
   fail "Working tree is not clean. Commit/stash changes or run with --verify-clean=false"
@@ -148,15 +135,12 @@ recreate_tag_at_head() {
 
 recreate_tag_at_head
 
-# gh release create accepts asset file paths as trailing arguments.
-CMD=(gh release create "$TAG" --title "$TAG" --notes-file "$NOTES_FILE" "${START_ASSETS[@]}")
+CMD=(gh release create "$TAG" --title "$TAG" --notes-file "$NOTES_FILE")
 
 echo "Release inputs:"
 echo "  Tag:        ${TAG}"
 echo "  Title:      ${TAG}"
 echo "  Notes file: ${NOTES_FILE}"
-echo "  Assets:     ${START_ASSETS[*]}"
-echo "  Docker:     ghcr.io/wsj-br/aegis-keepass:${VERSION}"
 
 if [[ "$DRY_RUN" == "true" ]]; then
   echo "[dry-run] Would run:"
@@ -167,14 +151,14 @@ fi
 
 "${CMD[@]}"
 echo "Release created successfully: ${TAG}"
-echo "Start scripts published as release assets (also at:"
-echo "  https://github.com/wsj-br/aegis-keepass/releases/latest/download/<script-name>)"
 echo ""
-echo "CI will also build and attach desktop executables via desktop-release.yml:"
-echo "  aegis-keepass-${VERSION}-windows-x64.zip"
-echo "  aegis-keepass-${VERSION}-linux-x64.tar.gz"
+echo "CI will build and attach desktop artifacts via desktop-release.yml:"
+echo "  aegis-keepass-${VERSION}-linux-amd64.tar.gz"
 echo "  aegis-keepass-${VERSION}-linux-arm64.tar.gz"
-echo "  aegis-keepass-${VERSION}-macos-universal2.zip"
+echo "  aegis-keepass-${VERSION}-macos-intel.dmg"
+echo "  aegis-keepass-${VERSION}-macos-arm64.dmg"
+echo "  aegis-keepass-${VERSION}-windows-x64.zip"
+echo "  aegis-keepass-${VERSION}-windows-arm64.zip"
 echo ""
-echo "See the progress at the GitHub repository https://github.com/wsj-br/aegis-keepass/actions"
+echo "See the progress at https://github.com/wsj-br/aegis-keepass/actions"
 echo ""

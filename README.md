@@ -6,125 +6,71 @@
 
 # Aegis-KeePass OTP Sync
 
-Import TOTP secrets from [Aegis Authenticator](https://getaegis.app/) encrypted backups into [KeePass](https://keepass.info/) entries. Upload your files in the browser, review matches, and download a merged `.kdbx` database—no plaintext XML export required.
+Import TOTP secrets from [Aegis Authenticator](https://getaegis.app/) encrypted backups into [KeePass](https://keepass.info/) entries. Open the desktop app, review matches, and save a merged `.kdbx` database—no plaintext XML export required.
 
 ## Overview
 
 This tool connects Aegis (mobile authenticator) and KeePass (password manager) by:
 
-- **Importing** OTP secrets from encrypted Aegis backups (decrypted only in server memory)
+- **Importing** OTP secrets from encrypted Aegis backups (decrypted only in the app's memory)
 - **Opening** your KeePass `.kdbx` database directly
 - **Matching** Aegis entries to KeePass entries using fuzzy string matching
 - **Applying** native KeePass TOTP fields (`TimeOtp-Secret-Base32`, and related settings)
-- **Exporting** a merged, encrypted `.kdbx` file for download
+- **Saving** a merged, encrypted `.kdbx` file where you choose
 - **Recording** Aegis UUID markers in KeePass Notes to support future re-imports
 
-Designed for single-user, localhost use. All processing happens in your browser session; nothing is persisted on the server after download or session end.
+Designed for single-user use on your own computer. Files are decrypted only in memory for the session, and that session is wiped when you save or end it.
 
-## Quick start
+## Install
 
-**Requirements:** [Docker](https://docs.docker.com/get-docker/) (Engine on Linux, or Docker Desktop on Windows/macOS), or on Windows the [WSL Containers](https://learn.microsoft.com/en-us/windows/wsl/wsl-container) preview (`wslc`).
-
-Start scripts are published as **GitHub Release assets** (and also live at the repo root on `main`). Prefer the release download URLs below for a versioned copy.
-
-### Linux / macOS
-
-```bash
-curl -fsSL https://github.com/wsj-br/aegis-keepass/releases/latest/download/aegis-keepass-start.sh | bash
-```
-
-Or download and run:
-
-```bash
-curl -fsSL -o aegis-keepass-start.sh \
-  https://github.com/wsj-br/aegis-keepass/releases/latest/download/aegis-keepass-start.sh
-
-chmod +x aegis-keepass-start.sh 
-
-./aegis-keepass-start.sh
-```
-
-### Windows (PowerShell) — Docker Desktop
-
-```powershell
-irm https://github.com/wsj-br/aegis-keepass/releases/latest/download/aegis-keepass-start.ps1 `
-| iex
-```
-
-Or download and run:
-
-```powershell
-irm https://github.com/wsj-br/aegis-keepass/releases/latest/download/aegis-keepass-start.ps1 `
-  -OutFile aegis-keepass-start.ps1
-
-.\aegis-keepass-start.ps1
-```
-
-### Windows (PowerShell) — WSL Containers (`wslc`)
-
-Uses Microsoft's built-in [WSL Containers](https://learn.microsoft.com/en-us/windows/wsl/wsl-container) CLI (no Docker Desktop). Prerequisite once:
-
-```powershell
-wsl --update --pre-release
-wsl --shutdown
-wslc --version
-```
-
-Then:
-
-```powershell
-irm https://github.com/wsj-br/aegis-keepass/releases/latest/download/aegis-keepass-start-wslc.ps1 `
-  | iex
-```
-
-Or download and run:
-
-```powershell
-irm https://github.com/wsj-br/aegis-keepass/releases/latest/download/aegis-keepass-start-wslc.ps1 `
-  -OutFile aegis-keepass-start-wslc.ps1
-
-.\aegis-keepass-start-wslc.ps1
-```
-
-All scripts pull `ghcr.io/wsj-br/aegis-keepass:latest` and start it on [http://127.0.0.1:8580](http://127.0.0.1:8580) (localhost-only). Docker/Compose paths also use a read-only root and tmpfs for `/tmp`; the `wslc` script mounts the same tmpfs. Press `Ctrl+C` to stop, or use `--stop` / `-Stop` for a detached container.
-
-Useful options: `--detach` / `-Detach`, `--port 9090` / `-Port 9090`, `--tag 0.1.1` / `-Tag 0.1.1`, `--open` / `-Open`. Run with `--help` / `-Help` for the full list.
-
-### Desktop app (no Docker)
-
-Optional standalone executables (same UI, native window via pywebview) are attached to each [GitHub Release](https://github.com/wsj-br/aegis-keepass/releases/latest). Docker remains the primary distribution path.
+Download the build that matches your computer from the [latest GitHub Release](https://github.com/wsj-br/aegis-keepass/releases/latest). Replace `<ver>` with the release version (for example `0.1.6`).
 
 | Platform | Asset |
 |----------|-------|
-| Windows x64 | [`aegis-keepass-<ver>-windows-x64.zip`](https://github.com/wsj-br/aegis-keepass/releases/latest) |
-| Linux x64 | [`aegis-keepass-<ver>-linux-x64.tar.gz`](https://github.com/wsj-br/aegis-keepass/releases/latest) |
-| Linux arm64 | [`aegis-keepass-<ver>-linux-arm64.tar.gz`](https://github.com/wsj-br/aegis-keepass/releases/latest) |
-| macOS (universal2) | [`aegis-keepass-<ver>-macos-universal2.zip`](https://github.com/wsj-br/aegis-keepass/releases/latest) |
+| Linux AMD64 | `aegis-keepass-<ver>-linux-amd64.tar.gz` |
+| Linux ARM64 | `aegis-keepass-<ver>-linux-arm64.tar.gz` |
+| macOS Intel | `aegis-keepass-<ver>-macos-intel.dmg` |
+| macOS Apple Silicon | `aegis-keepass-<ver>-macos-arm64.dmg` |
+| Windows x64 | `aegis-keepass-<ver>-windows-x64.zip` |
+| Windows ARM | `aegis-keepass-<ver>-windows-arm64.zip` |
 
-Replace `<ver>` with the release version (for example `0.1.5`), or browse the latest release page for exact filenames.
+Pick the row that matches the machine, not the one that is merely newest. An Intel Mac cannot run the Apple Silicon disk image, and a Windows ARM PC needs the ARM zip.
 
-**Linux note:** the binary does not ship GTK/ICU/WebKit libraries or icon themes; install them on the host, e.g. `sudo apt-get install -y gir1.2-gtk-3.0 gir1.2-webkit2-4.1 libgtk-3-0 libwebkit2gtk-4.1-0`. **Windows note:** Edge WebView2 Runtime is required (usually already installed on Windows 10/11).
+### Linux
 
-### Run it manually
-
-Prefer the [Quick start](#quick-start) scripts. 
+The archive contains `aegis-keepass`, plus `LICENSE` and `NOTICES`. The binary does not include GTK or WebKit; install those first (Debian/Ubuntu):
 
 ```bash
-docker run --rm -p 127.0.0.1:8580:8580 -p '[::1]:8580:8580' \
-  --read-only --tmpfs /tmp:size=64M,mode=1777 \
-  ghcr.io/wsj-br/aegis-keepass:latest
+sudo apt-get install -y \
+  gir1.2-gtk-3.0 \
+  gir1.2-webkit2-4.1 \
+  libgtk-3-0 \
+  libwebkit2gtk-4.1-0
+tar -xzf aegis-keepass-<ver>-linux-amd64.tar.gz
+chmod +x aegis-keepass-*/aegis-keepass
+./aegis-keepass-*/aegis-keepass
 ```
 
+Use the `linux-arm64` archive on ARM. Other distributions need the same GTK 3 and WebKitGTK 4.1 libraries under their own package names.
 
-### Workflow
+### macOS
 
-1. **Upload** — Select your encrypted Aegis backup (`.json`) and KeePass database (`.kdbx`). Enter the Aegis backup password, KeePass master password, and keyfile if your database uses one.
-2. **Review** — Confirm automatic matches, manually link unmatched entries, and resolve conflicts before applying changes.
-3. **Download** — Click **Download merged database** to receive `keepass-merged.kdbx` in your browser.
+Open the `.dmg` and drag **Aegis-KeePass OTP Sync** onto Applications.
 
-After download or **End session**, all session data is securely wiped from server memory.
+The build is not signed. The first time you launch it, right-click the app, choose **Open**, then choose **Open Anyway** under **System Settings → Privacy & Security** if Gatekeeper still blocks it.
 
-**Important:** Back up your original KeePass database before replacing it with the downloaded file.
+### Windows
+
+Unzip the archive and run `aegis-keepass.exe`. [Edge WebView2 Runtime](https://developer.microsoft.com/microsoft-edge/webview2/) is required and is already installed on most Windows 10 and 11 systems. Use the `windows-arm64` zip on Windows ARM and the `windows-x64` zip on 64-bit Intel or AMD PCs.
+
+## First run
+
+1. **Back up** your KeePass database before you replace it with the merged file.
+2. **Open** the app.
+3. **Read** your encrypted Aegis backup (`.json`) and KeePass database (`.kdbx`). Enter the Aegis backup password, the KeePass master password, and a keyfile if the database uses one.
+4. **Review** automatic matches. Link anything left over by hand, and resolve conflicts before applying changes.
+5. **Save** with **Save merged database**. Choose where to write the merged `.kdbx` (the suggested name is `keepass-merged.kdbx`).
+6. **End the session** when you are done. Session data is wiped from memory. Open the saved database in KeePass or KeePassXC and confirm the TOTP fields before you retire the backup copy.
 
 ## Requirements
 
@@ -136,21 +82,14 @@ After download or **End session**, all session data is securely wiped from serve
 
 ## Configuration
 
-Environment variables can be set in `docker-compose.yml` or passed to Gunicorn when running locally.
+These environment variables apply when you run from source (`./scripts/dev`). The packaged app uses the defaults.
 
 | Variable                     | Default              | Description                                                                                                               |
 |------------------------------|----------------------|---------------------------------------------------------------------------------------------------------------------------|
 | `SESSION_TIMEOUT_SECONDS`    | `1800`               | Idle session timeout in seconds (30 minutes)                                                                              |
 | `MAX_IN_MEMORY_UPLOAD_BYTES` | `33554432`           | Combined upload size kept entirely in RAM (32 MB)                                                                         |
 | `MAX_UPLOAD_BYTES`           | `52428800`           | Maximum allowed upload size (50 MB)                                                                                       |
-| `FLASK_SECRET_KEY`           | *(random per start)* | Secret used to sign session cookies. Set explicitly if you need stable sessions across restarts (e.g. during development) |
-
-The Docker Compose file also configures:
-
-- **Read-only root filesystem** — the container cannot write outside `/tmp`
-- **Tmpfs for `/tmp`** — temporary spill storage for large uploads (64 MB), cleared when the container stops
-- **Dropped capabilities** — `cap_drop: ALL` and `no-new-privileges`
-- **Optional `FLASK_SECRET_KEY`** — uncomment the env entry in `docker-compose.yml` after exporting the variable on the host (do not leave it enabled unset, or the container gets an empty secret)
+| `FLASK_SECRET_KEY`           | *(random per start)* | Secret used to sign session cookies. Set it when you need stable cookies across restarts while developing                |
 
 ## How matching works
 
@@ -189,33 +128,32 @@ These are KeePass 2.x native TOTP fields, compatible with KeePassXC and Keepass2
 
 ## Security model
 
-- **Encrypted at rest on your machine** — You upload already-encrypted Aegis JSON and `.kdbx` files; decryption happens only in server memory during the session
+- **Encrypted at rest on your machine** — You open already-encrypted Aegis JSON and `.kdbx` files; decryption happens only in the app's memory during the session
 - **In-memory processing** — Typical backups are held in wipeable buffers and never written to disk
-- **Secure wipe on session end** — Sensitive buffers are overwritten with random data, then zeroed, when you download or end the session
-- **No server-side retention** — The merged database is streamed to your browser; the server does not keep a copy
-- **Localhost-only host binding (with provided Compose file)** — Gunicorn listens on `0.0.0.0:8580` inside the container (normal for Docker port forwarding). The included `docker-compose.yml` maps that to **`127.0.0.1:8580` and `::1:8580` on the host**, so other machines cannot reach the app unless you change the port mapping (e.g. to `8580:8580`)
-- **Hardened container** — Non-root user, read-only filesystem, tmpfs for temporary files
-- **Offline UI** — CSS, JS, and icons are bundled in the image under `app/static/`; the pages do not load fonts or scripts from the internet
-- **Session cookies** — HttpOnly and SameSite=Strict; there is no login layer (intended for trusted localhost use)
-- **Health check** — `GET /health` returns `200 OK` for container orchestration
+- **Secure wipe on session end** — Sensitive buffers are overwritten with random data, then zeroed, when you save or end the session
+- **Nothing kept after save** — The merged database is written only where you choose in the Save dialog
+- **Loopback only** — The window talks to a Waitress server bound to `127.0.0.1` inside the same process. The app does not listen on your network
+- **Offline UI** — CSS, JS, and icons ship inside the app under `app/static/`; the pages do not load fonts or scripts from the internet
+- **Session cookies** — HttpOnly and SameSite=Strict; there is no login layer (intended for trusted single-user use)
 
 ### Limitations
 
-Memory wiping is best-effort. Python `str` and immutable `bytes` objects cannot be guaranteed erased; the app uses wipeable `SecureBytes` buffers where possible. CPython may copy data internally during cryptography or HTTP handling. This tool is suitable for personal localhost use, not for environments that require hardware security modules or formal secret-management guarantees.
+Memory wiping is best-effort. Python `str` and immutable `bytes` objects cannot be guaranteed erased; the app uses wipeable `SecureBytes` buffers where possible. CPython may copy data internally during cryptography or HTTP handling. This tool is suitable for personal use on your own computer, not for environments that require hardware security modules or formal secret-management guarantees.
 
-Uploads exceeding the in-memory threshold (>32 MB combined) are encrypted and written to `/tmp` inside the container. Those files are shredded when the session ends.
-
+Uploads larger than the in-memory threshold (32 MB combined) are encrypted and written to the system temporary directory. Those files are shredded when the session ends.
 
 ## Troubleshooting
 
-| Issue               | What to try                                                                                                                                    |
-|---------------------|------------------------------------------------------------------------------------------------------------------------------------------------|
-| Upload rejected     | Confirm the Aegis file is an **encrypted** backup and the KeePass file is a valid `.kdbx`. Check file sizes against `MAX_UPLOAD_BYTES`.        |
-| Wrong password      | Aegis and KeePass passwords are validated at upload; re-upload with the correct credentials.                                                   |
-| Unmatched entries   | Use manual linking in the review step. Matching depends on title similarity—rename entries in KeePass or Aegis if titles differ significantly. |
-| Session expired     | Idle sessions time out after 30 minutes by default. Start again from the upload page.                                                          |
-| Port already in use | Stop any process on port 8580, or change the host port mapping in `docker-compose.yml`.                                                        |
-| First page blank / reset | Docker can publish the host port before Gunicorn is ready. Wait for `/health` (`curl -sf http://127.0.0.1:8580/health`) or `docker compose up --wait && docker compose logs -f`, then refresh. Prefer `http://127.0.0.1:8580` if `localhost` stalls. |
+| Issue | What to try |
+|-------|-------------|
+| Linux window does not open | Install GTK 3 and WebKitGTK 4.1 (see [Linux](#linux)). A missing typelib usually shows up as a WebKit or `gi` error in the terminal. |
+| Windows window does not open | Install the [Edge WebView2 Runtime](https://developer.microsoft.com/microsoft-edge/webview2/). Confirm you unpacked the zip that matches x64 or ARM. |
+| macOS says the app cannot be opened | The build is unsigned. Right-click **Open**, then **Open Anyway** in **System Settings → Privacy & Security**. |
+| Wrong-architecture download | Use the asset whose name matches your CPU: `linux-amd64`, `linux-arm64`, `macos-intel`, `macos-arm64`, `windows-x64`, or `windows-arm64`. |
+| Files rejected | Confirm the Aegis file is an **encrypted** backup and the KeePass file is a valid `.kdbx`. Check file sizes against `MAX_UPLOAD_BYTES`. |
+| Wrong password | Aegis and KeePass passwords are checked when you read the files; start again with the correct credentials. |
+| Unmatched entries | Link them by hand in the review step. Matching depends on title similarity. |
+| Session expired | Idle sessions time out after 30 minutes by default. Start again from the first screen. |
 
 ## License
 

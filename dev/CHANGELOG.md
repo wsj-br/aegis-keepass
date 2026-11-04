@@ -8,30 +8,39 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 ## [Unreleased]
 
 ### Added
-- Optional desktop shell (`desktop_main.py` + pywebview + Waitress) that opens the existing Flask UI in a native window without Docker.
-- Per-OS PyInstaller packaging and CI (`.github/workflows/desktop-release.yml`) producing Windows x64, Linux x64, Linux arm64, and macOS universal2 release assets.
-- Desktop download path uses a native Save dialog via `window.pywebview.api.download_merged` (web/Docker browser download unchanged).
+- Desktop app (`desktop_main.py` + pywebview + Waitress) is how the product runs. `scripts/dev` opens that window; `scripts/dev --http` serves the same Flask app on loopback for local checks.
+- `scripts/version` prints the version from `app/_version.py` and, given `MAJOR.MINOR.PATCH`, updates that file.
+- `scripts/upgrade-dependencies.sh` upgrades pip (plus setuptools and wheel) and every package in the repo-root `requirements*.txt` files, then regenerates `NOTICES`.
+- Release builds for six native targets: Linux AMD64, Linux ARM64, macOS Intel, macOS Apple Silicon, Windows x64, and Windows ARM. macOS ships a drag-to-Applications DMG (with a `.sha256` file) instead of a zip.
+- Desktop Save dialog uses a native file dialog via `window.pywebview.api.download_merged`.
 
 ### Changed
-- Documented upgrading Python packages in an existing venv (`pip install --upgrade -r …`), including desktop deps and Docker rebuild notes, in `dev/DEVEL.md`.
+- The desktop window uses the app logo. On Linux, a desktop entry with that logo is registered so GNOME shows it instead of the generic gear icon. Windows and macOS packages embed the same logo.
+- Waitress no longer prints "Task queue depth is N" when the window loads its local files.
+- Install and developer docs describe the desktop download only. Helper scripts live under `scripts/` (`version`, `dev`, `build-desktop.sh`, `release.sh`, `update-notices.sh`).
 - Web UI uses the same compact viewport-fit shell as the desktop app on fine pointers (no page scrollbar; table scrolls); touch phones keep a roomier scrollable layout.
 - Increased type sizes on the fine-pointer web compact shell for readability (desktop densified scale unchanged).
 - Encrypted upload spill temp directories now use the platform default temp location instead of hardcoding `/tmp` (Windows-safe).
 - Desktop shell default window is 750×660 (`min_size` 700×600) with a compact app-shell layout so upload and review fit without a page scrollbar (review still scrolls inside the table).
 - Desktop shell densifies upload/review/complete further for 750×660 (resets coarse-pointer 44px targets, hides secondary hints) so views fill the window without a panel scrollbar; only the match table scrolls.
 - Header step rail (Upload → Review → Download) always sits under the brand title row; theme toggle stays on the brand row.
-- Desktop shell uses Read / Save terminology for step 1 and step 3 (and related CTAs); the web UI keeps Upload / Download.
+- Desktop shell uses Read / Save terminology for step 1 and step 3 (and related CTAs). `./scripts/dev --http` keeps Upload / Download.
 - Upload, review, and completion surfaces are flat full-bleed panels (no nested content cards); the match table uses denser type, padding, and column widths for the narrower desktop window.
 - PyInstaller desktop spec collects only desktop pywebview backends (skips Android/Kivy), includes `app.system_theme`, and excludes unused `setuptools`/`pkg_resources` so the frozen binary starts cleanly.
 - Linux desktop packages omit bundled icon themes/locales and GTK/ICU/WebKit shared libraries (use host packages instead) to cut download size; runtime/package docs list the required `apt` packages.
+- Documented upgrading Python packages in an existing venv (`pip install --upgrade -r …`) in `dev/DEVEL.md`.
 
 ### Fixed
+- `./scripts/upgrade-dependencies.sh` regenerates `NOTICES` in a clean environment, so it no longer fails when the project virtualenv does not have `pip-licenses`.
 - Linux desktop builds bundle PyGObject (`gi`) and load host GTK/WebKit typelibs, so the packaged binary starts when the venv cannot see Debian `python3-gi`.
 - Desktop Save dialog uses pywebview `FileDialog.SAVE` instead of the deprecated `SAVE_DIALOG` constant.
 - Desktop “System” theme now follows the host OS appearance (including Windows dark mode under WSL); WebKitGTK `prefers-color-scheme` alone was stuck on light. Falls back to dark when the OS preference cannot be detected.
 - Desktop theme toggle now cycles System → Light → Dark reliably when `localStorage` is unavailable in pywebview/WebKitGTK (was stuck after Light).
 
 ### Removed
+- Docker image, Compose file, Gunicorn, `wsgi.py`, container start scripts, and the Docker release workflow. The desktop app is the only distribution.
+- Removed `GET /health`. The desktop shell waits for the upload page before opening the window. The version stays in the window footer and `app/_version.py`.
+- Removed unused on-disk helpers (`AegisParser.parse`, `AegisDecryptor.decrypt_file`, `KeePassUpdater.save`) and the unused `get_current_session` helper. The app reads and writes vault bytes in memory.
 - Removed Impeccable design-skill artifacts (`.impeccable/`) and attribution from `NOTICES` / `scripts/update-notices.sh`, plus related ignore and doc references.
 
 ## [0.1.5] - 2026-08-05

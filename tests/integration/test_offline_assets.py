@@ -41,7 +41,7 @@ def _iter_ui_files():
             yield path
 
 
-def test_static_bundle_is_present_for_docker():
+def test_static_bundle_is_present():
     required = [
         APP / "static" / "css" / "app.css",
         APP / "static" / "js" / "theme.js",
@@ -51,7 +51,7 @@ def test_static_bundle_is_present_for_docker():
         APP / "static" / "img" / "favicon.png",
     ]
     missing = [str(p.relative_to(ROOT)) for p in required if not p.is_file()]
-    assert not missing, f"Missing local UI assets that Docker must ship: {missing}"
+    assert not missing, f"Missing local UI assets: {missing}"
 
 
 def test_templates_and_static_have_no_remote_assets():

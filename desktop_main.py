@@ -124,8 +124,8 @@ def _free_loopback_port() -> int:
         return int(sock.getsockname()[1])
 
 
-def _wait_for_health(port: int, timeout: float = 30.0) -> None:
-    url = f'http://127.0.0.1:{port}/health'
+def _wait_until_ready(port: int, timeout: float = 30.0) -> None:
+    url = f'http://127.0.0.1:{port}/'
     deadline = time.monotonic() + timeout
     last_error: Exception | None = None
     while time.monotonic() < deadline:
@@ -145,7 +145,16 @@ def main() -> int:
 
     from app import create_app
     from app.desktop_api import DesktopApi
+    from app.desktop_icon import (
+        install_linux_desktop_entry,
+        use_linux_app_id,
+        window_icon_path,
+    )
     from app.system_theme import prepare_desktop_system_theme
+
+    # GNOME ignores a GTK window icon and shows a gear until a desktop entry
+    # with the same app id exists. Publish that entry before the window opens.
+    install_linux_desktop_entry()
 
     # WebKitGTK often reports light for prefers-color-scheme; align with the OS first.
     prepare_desktop_system_theme()
@@ -156,7 +165,7 @@ def main() -> int:
 
     thread = threading.Thread(target=server.run, name='waitress', daemon=True)
     thread.start()
-    _wait_for_health(port)
+    _wait_until_ready(port)
 
     api = DesktopApi(app)
     url = f'http://127.0.0.1:{port}/'
@@ -168,7 +177,8 @@ def main() -> int:
         height=660,
         min_size=(700, 600),
     )
-    webview.start()
+    use_linux_app_id()
+    webview.start(icon=window_icon_path())
 
     try:
         server.close()

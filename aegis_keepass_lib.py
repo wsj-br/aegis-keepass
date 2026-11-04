@@ -8,7 +8,6 @@ Parsers, entry matching, and applying imported OTP data to KeePass databases.
 import base64
 import io
 import json
-import os
 import re
 import uuid
 from dataclasses import dataclass, field
@@ -46,16 +45,6 @@ class AegisDecryptor:
     def is_encrypted_vault(data: dict) -> bool:
         """Check if parsed JSON is an encrypted Aegis backup."""
         return isinstance(data, dict) and 'header' in data and 'db' in data
-
-    @staticmethod
-    def is_encrypted(filepath: str) -> bool:
-        """Check if a file is an encrypted Aegis backup."""
-        try:
-            with open(filepath, 'r', encoding='utf-8') as f:
-                data = json.load(f)
-            return AegisDecryptor.is_encrypted_vault(data)
-        except (json.JSONDecodeError, FileNotFoundError, UnicodeDecodeError):
-            return False
 
     @staticmethod
     def is_encrypted_bytes(data: bytes) -> bool:
@@ -217,13 +206,6 @@ class AegisDecryptor:
             raise ValueError("Not an encrypted Aegis backup")
         return AegisDecryptor._decrypt_vault(vault, password)
 
-    @staticmethod
-    def decrypt_file(filepath: str, password: str) -> dict:
-        """Decrypt an Aegis backup file and return the decrypted JSON data."""
-        with open(filepath, 'r', encoding='utf-8') as f:
-            data = json.load(f)
-        return AegisDecryptor._decrypt_vault(data, password)
-
 
 @dataclass
 class AegisEntry:
@@ -350,18 +332,6 @@ class AegisParser:
             raise ValueError("Only encrypted Aegis backup files are supported.")
         vault_data = AegisDecryptor.decrypt_data(data, password)
         return AegisParser._entries_from_vault(vault_data, registry=registry)
-
-    @staticmethod
-    def parse(filepath: str, password: str) -> List[AegisEntry]:
-        """Parse encrypted Aegis JSON file from disk."""
-        if not AegisDecryptor.is_encrypted(filepath):
-            raise ValueError("Only encrypted Aegis backup files are supported.")
-        if not CRYPTO_AVAILABLE:
-            raise RuntimeError(
-                "The 'cryptography' library is required to decrypt Aegis backups."
-            )
-        vault_data = AegisDecryptor.decrypt_file(filepath, password)
-        return AegisParser._entries_from_vault(vault_data)
 
 
 class KeePassKdbx:
@@ -978,12 +948,4 @@ class KeePassUpdater:
         self.kp.save(buffer)
         buffer.seek(0)
         return buffer.getvalue()
-
-    def save(self, filepath: str) -> None:
-        """Save the modified database to a file."""
-        self.kp.save(filepath)
-        try:
-            os.chmod(filepath, 0o600)
-        except OSError:
-            pass
 

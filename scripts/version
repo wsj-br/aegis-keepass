@@ -1,0 +1,66 @@
+#!/usr/bin/env bash
+# Print or set the application version in app/_version.py.
+#
+#   ./scripts/version
+#   ./scripts/version 0.1.6
+set -euo pipefail
+
+ROOT="$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)"
+VERSION_FILE="${ROOT}/app/_version.py"
+
+fail() {
+  echo "Error: $*" >&2
+  exit 1
+}
+
+usage() {
+  cat <<'EOF'
+Usage: ./scripts/version [MAJOR.MINOR.PATCH]
+
+With no arguments, print the version from app/_version.py.
+With one argument, set that version (digits only, for example 0.1.6).
+EOF
+}
+
+[[ -f "$VERSION_FILE" ]] || fail "Version file not found: ${VERSION_FILE}"
+
+read_version() {
+  python3 - "$VERSION_FILE" <<'PY'
+import re
+import sys
+
+path = sys.argv[1]
+text = open(path, encoding="utf-8").read()
+match = re.search(r'__version__\s*=\s*"([^"]+)"', text)
+if not match:
+    sys.exit(f"Could not read __version__ from {path}")
+print(match.group(1))
+PY
+}
+
+if [[ $# -eq 0 ]]; then
+  read_version
+  exit 0
+fi
+
+if [[ $# -ne 1 || "$1" == "-h" || "$1" == "--help" ]]; then
+  if [[ "${1:-}" == "-h" || "${1:-}" == "--help" ]]; then
+    usage
+    exit 0
+  fi
+  usage >&2
+  exit 1
+fi
+
+NEW="$1"
+[[ "$NEW" =~ ^[0-9]+\.[0-9]+\.[0-9]+$ ]] || fail "Version must be MAJOR.MINOR.PATCH (digits only), got: ${NEW}"
+
+grep -q '^__version__ = "' "$VERSION_FILE" || fail "Expected a __version__ assignment in ${VERSION_FILE}"
+
+TMP="$(mktemp)"
+sed "s/^__version__ = \".*\"/__version__ = \"${NEW}\"/" "$VERSION_FILE" >"$TMP"
+mv "$TMP" "$VERSION_FILE"
+
+UPDATED="$(read_version)"
+[[ "$UPDATED" == "$NEW" ]] || fail "Version file still reads ${UPDATED} after update"
+printf '%s\n' "$UPDATED"

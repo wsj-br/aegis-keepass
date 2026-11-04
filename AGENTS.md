@@ -12,8 +12,8 @@ The changelog is the running record of work done in the repo. Update it as part 
 
 Add an entry when you:
 
-- Implement or fix application logic (`app/`, `aegis_keepass_lib.py`, `wsgi.py`)
-- Change Docker, Compose, CI, or release tooling
+- Implement or fix application logic (`app/`, `aegis_keepass_lib.py`, `desktop_main.py`)
+- Change CI, packaging, or release tooling
 - Add or edit user-facing docs (`README.md`, `release-notes/`, templates, UI copy)
 - Change dependencies, environment variables, or defaults
 - Add or modify developer docs under `dev/`
@@ -98,14 +98,13 @@ app/
   routes/
     upload.py            ← Upload page + POST /api/upload
     review.py            ← Review UI + match/apply/download/end-session APIs
-    health.py            ← GET /health
   templates/             ← Jinja2 HTML (upload.html, review.html, base.html)
   static/js/             ← upload.js, review.js (fetch calls to /api/*)
   static/css/app.css     ← Styles
-wsgi.py                  ← Gunicorn entry: create_app()
 desktop_main.py          ← Desktop entry: Waitress + pywebview shell
 app/desktop_api.py       ← JS bridge (native Save dialog for merged .kdbx)
-packaging/               ← PyInstaller spec and local build helper
+packaging/               ← PyInstaller spec and DMG background
+scripts/                 ← version, dev, build-desktop, release, notices, upgrade-dependencies
 ```
 
 | Task | Primary files |
@@ -117,11 +116,10 @@ packaging/               ← PyInstaller spec and local build helper
 | Review UI, manual links, download | `app/routes/review.py`, `app/templates/review.html`, `app/static/js/review.js` |
 | Upload UI and client-side checks | `app/templates/upload.html`, `app/static/js/upload.js` |
 | Session timeout, state, wipe on end | `app/session.py`, `app/secure.py` |
-| Desktop shell / packaging | `desktop_main.py`, `app/desktop_api.py`, `packaging/`, `requirements-desktop.txt` |
+| Desktop shell / packaging | `desktop_main.py`, `app/desktop_api.py`, `packaging/`, `scripts/build-desktop.sh`, `requirements-desktop.txt` |
 | New HTTP route or API | Relevant blueprint in `app/routes/`, register in `app/__init__.py` if adding a blueprint |
-| Config / env defaults | `app/__init__.py`, `docker-compose.yml`, document in `README.md` |
-| Version string (footer, releases) | `app/_version.py` only |
-| Container image | `Dockerfile`, `.dockerignore` |
+| Config / env defaults | `app/__init__.py`, document in `README.md` |
+| Version string (footer, releases) | `app/_version.py` only; print or set it with `scripts/version` |
 
 ### Modifying sources
 
@@ -130,10 +128,10 @@ packaging/               ← PyInstaller spec and local build helper
    - **Library** (`aegis_keepass_lib.py`) — format-agnostic logic; no Flask imports.
    - **Routes** — HTTP, templates, JSON; delegate heavy work to the library.
    - **Session/secure** — sensitive data lifecycle; use `SecureBytes` and `WipeRegistry` for secrets and file bytes.
-3. **Session model** — state is **in-memory per worker**. Run Gunicorn with **`--workers 1`** locally and in Docker. Do not assume shared storage across workers or restarts.
+3. **Session model** — state is **in-memory in one process**. `./scripts/dev` and the packaged app each run a single Waitress server. Do not assume shared storage across processes or restarts.
 4. **API + UI together** — JSON endpoints under `/api/*` are consumed by `app/static/js/*.js`. When changing request/response shape, update both the route and the matching JS.
 5. **Templates** — extend `base.html`; version and GitHub link come from the context processor in `app/__init__.py`.
-6. **Dependencies** — add runtime packages to `requirements.txt` and test tools to `requirements-dev.txt`; rebuild Docker (`docker compose up --build`) to pick runtime deps up in containers. Desktop-only packages go in `requirements-desktop.txt` (not installed in the Docker image).
+6. **Dependencies** — add runtime packages to `requirements.txt`, desktop packages to `requirements-desktop.txt`, and test tools to `requirements-dev.txt`. Refresh `NOTICES` with `./scripts/update-notices.sh` after runtime dependency changes.
 7. **Security-sensitive code** — never log passwords, decrypted vault JSON, or `.kdbx` bytes. Prefer `SecureBytes` over plain `str`/`bytes` for credentials and uploads.
 
 ## Development environment
@@ -152,20 +150,12 @@ Run locally (preferred for fast iteration):
 ```bash
 source .venv/bin/activate
 export FLASK_SECRET_KEY=dev-secret   # optional; stabilizes session cookies across restarts
-gunicorn --bind 127.0.0.1:8580 --bind '[::1]:8580' --workers 1 --timeout 120 wsgi:app
+./scripts/dev --http
 ```
 
-Open [http://127.0.0.1:8580](http://127.0.0.1:8580). Wait until the worker has booted (`Booting worker` in the log, or `/health` returns 200) before loading the UI.
+Open [http://127.0.0.1:8580](http://127.0.0.1:8580). Wait until the process prints `Serving on` before loading the UI.
 
-Run in Docker (matches production image):
-
-```bash
-docker compose up --build --wait && docker compose logs -f
-```
-
-(`--wait` implies detached mode; `logs -f` is what shows the Gunicorn `Listening` / `Booting worker` lines.)
-
-After changing `Dockerfile` or dependencies, rebuild with `--build`. Python-only changes do not require a rebuild when using the venv path.
+The desktop window (what users run) is `./scripts/dev` with no flags. It needs the desktop dependencies and, on Linux, GTK/WebKit. See [`dev/DEVEL.md`](dev/DEVEL.md).
 
 ## Testing changes
 
@@ -187,19 +177,19 @@ Tests live under `tests/` (unit + Flask integration). Fixtures generate syntheti
 With venv activated, from repo root:
 
 ```bash
-python -m compileall -q aegis_keepass_lib.py app wsgi.py desktop_main.py
+python -m compileall -q aegis_keepass_lib.py app desktop_main.py
 python -c "from app import create_app; create_app(); print('OK')"
 ```
 
 Fix any syntax or import errors before proceeding.
 
-### 3. Health check (server running)
+### 3. App is serving (server running)
 
 ```bash
-curl -sf http://127.0.0.1:8580/health && echo
+curl -sf -o /dev/null -w '%{http_code}\n' http://127.0.0.1:8580/
 ```
 
-Expect `200`. Use this after starting Gunicorn or Compose.
+Expect `200`. Use this after `./scripts/dev --http` is running.
 
 ### 4. Scope-appropriate manual checks
 
@@ -210,12 +200,12 @@ Expect `200`. Use this after starting Gunicorn or Compose.
 | `aegis_keepass_lib.py` (matching) | Auto-match quality; `AegisUUID` in Notes respected on re-import |
 | `aegis_keepass_lib.py` (KeePass) | Downloaded `.kdbx` opens; `TimeOtp-*` fields present on matched entries |
 | Session / secure / auth | **End session** returns to upload; idle timeout behaves if touched |
-| Docker / Compose | `docker compose up --build` succeeds; `docker compose ps` shows healthy |
-| Templates / CSS only | Visual check in browser; no broken layout or JS console errors |
+| Templates / CSS only | Visual check in the desktop window or `./scripts/dev --http`; no broken layout or JS console errors |
+| Packaging / release assets | `./scripts/build-desktop.sh` produces a host binary; macOS also produces a DMG |
 
 Full end-to-end smoke (when touching core flow):
 
-1. Start app (venv or Docker).
+1. Start the app with `./scripts/dev` or `./scripts/dev --http`.
 2. Upload **copies** of an encrypted Aegis `.json` and a `.kdbx` (never commit real files).
 3. Complete review; download merged database.
 4. Confirm session ends cleanly.
@@ -224,7 +214,7 @@ Use **copies** of real backups only on localhost. Do not add sample vaults to th
 
 ### 5. When tests are not runnable
 
-If you cannot run `pytest` or the app (missing deps, Docker, etc.), say so explicitly and list what you verified statically. Do not claim end-to-end verification without evidence.
+If you cannot run `pytest` or the app (missing deps, no display for the desktop window, etc.), say so explicitly and list what you verified statically. Do not claim end-to-end verification without evidence.
 
 ## Other project docs
 

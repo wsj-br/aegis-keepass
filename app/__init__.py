@@ -2,6 +2,7 @@
 
 from __future__ import annotations
 
+import logging
 import os
 import sys
 
@@ -20,7 +21,17 @@ def _resource_root() -> str | None:
     return None
 
 
+def _quiet_waitress_queue() -> None:
+    """Drop the routine "Task queue depth is N" warning.
+
+    The window loads several local assets at once. Waitress logs a warning
+    whenever one of those requests waits for a thread. That wait is normal.
+    """
+    logging.getLogger('waitress.queue').setLevel(logging.ERROR)
+
+
 def create_app() -> Flask:
+    _quiet_waitress_queue()
     frozen_root = _resource_root()
     if frozen_root is not None:
         app = Flask(
@@ -59,7 +70,6 @@ def create_app() -> Flask:
             'system_theme': app.config.get('SYSTEM_THEME'),
         }
 
-    from app.routes.health import bp as health_bp
     from app.routes.upload import bp as upload_bp
     from app.routes.review import bp as review_bp
     from app.session import SessionStore
@@ -68,7 +78,6 @@ def create_app() -> Flask:
         timeout_seconds=app.config['SESSION_TIMEOUT_SECONDS']
     )
 
-    app.register_blueprint(health_bp)
     app.register_blueprint(upload_bp)
     app.register_blueprint(review_bp)
 

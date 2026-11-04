@@ -481,5 +481,5 @@ Shared tokens: `--motion-fast` (`0.15s`) for control/drop-zone/toast feedback; `
 - **Don't** add marketing kickers/eyebrows, hero compositions, stat-strip landing layouts, or emoji as system iconography for new surfaces.
 - **Don't** invent per-component shadow stacks or glow focus; keep both themes on the shared Surface Lift token and flat controls.
 - **Don't** use pill radii on primary buttons or wrap upload/review jobs in nested floating cards; overlays may elevate, task panels should not.
-- **Don't** load fonts, scripts, stylesheets, or icon kits from a CDN or any remote host; the UI must run offline from assets bundled in the container.
+- **Don't** load fonts, scripts, stylesheets, or icon kits from a CDN or any remote host; the UI must run offline from assets bundled in the desktop app.
 - **Don't** add bounce/elastic easing, scroll-driven reveals, or looping decoration outside the upload progress active step.

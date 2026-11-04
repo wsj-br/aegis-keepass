@@ -195,8 +195,8 @@ hiddenimports = [
     'aegis_keepass_lib',
     'app',
     'app.desktop_api',
+    'app.desktop_icon',
     'app.system_theme',
-    'app.routes.health',
     'app.routes.upload',
     'app.routes.review',
     'app.session',
@@ -226,8 +226,8 @@ for pkg in ('cryptography', 'pykeepass'):
     binaries += pkg_binaries
     hiddenimports += pkg_hidden
 
-# macOS universal2 when building on macOS with a universal2 Python.
-target_arch = 'universal2' if sys.platform == 'darwin' else None
+# Native architecture of this interpreter (separate Intel and Apple Silicon builds).
+target_arch = None
 
 a = Analysis(
     [os.path.join(ROOT, 'desktop_main.py')],
@@ -248,7 +248,7 @@ a = Analysis(
     runtime_hooks=[],
     # setuptools/pkg_resources are unused by the app; collecting them with
     # modern setuptools often breaks the frozen binary (missing top-level jaraco).
-    excludes=['gunicorn', 'pkg_resources', 'setuptools'],
+    excludes=['pkg_resources', 'setuptools'],
     win_no_prefer_redirects=False,
     win_private_assemblies=False,
     cipher=block_cipher,
@@ -264,6 +264,26 @@ print(
 )
 
 pyz = PYZ(a.pure, a.zipped_data, cipher=block_cipher)
+
+_icon_mod_spec = importlib.util.spec_from_file_location(
+    'aegis_desktop_icon',
+    os.path.join(ROOT, 'app', 'desktop_icon.py'),
+)
+_desktop_icon = importlib.util.module_from_spec(_icon_mod_spec)
+_icon_mod_spec.loader.exec_module(_desktop_icon)
+_logo_png = os.path.join(ROOT, 'app', 'static', 'img', 'logo.png')
+_icon_dir = os.path.join(ROOT, 'build')
+os.makedirs(_icon_dir, exist_ok=True)
+_exe_icon = None
+if sys.platform == 'win32':
+    _exe_icon = os.path.join(_icon_dir, 'aegis-keepass.ico')
+    with open(_logo_png, 'rb') as _logo_fh, open(_exe_icon, 'wb') as _icon_fh:
+        _icon_fh.write(_desktop_icon.png_to_ico(_logo_fh.read()))
+_bundle_icon = None
+if sys.platform == 'darwin':
+    _bundle_icon = os.path.join(_icon_dir, 'aegis-keepass.icns')
+    with open(_logo_png, 'rb') as _logo_fh, open(_bundle_icon, 'wb') as _icon_fh:
+        _icon_fh.write(_desktop_icon.png_to_icns(_logo_fh.read()))
 
 exe = EXE(
     pyz,
@@ -285,13 +305,14 @@ exe = EXE(
     target_arch=target_arch,
     codesign_identity=None,
     entitlements_file=None,
+    icon=_exe_icon,
 )
 
 if sys.platform == 'darwin':
     app = BUNDLE(
         exe,
         name='Aegis-KeePass OTP Sync.app',
-        icon=None,
+        icon=_bundle_icon,
         bundle_identifier='br.wsj.aegis-keepass',
         info_plist={
             'CFBundleShortVersionString': APP_VERSION,

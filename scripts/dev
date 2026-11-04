@@ -1,0 +1,108 @@
+#!/usr/bin/env python3
+"""Run the desktop app, or a loopback HTTP server for local checks.
+
+    ./scripts/dev
+    ./scripts/dev --http
+    ./scripts/dev --http --port 8580
+"""
+
+from __future__ import annotations
+
+import argparse
+import os
+import socket
+import sys
+from pathlib import Path
+
+ROOT = Path(__file__).resolve().parents[1]
+
+
+def _prefer_venv() -> None:
+    """Re-exec with the project virtualenv when one exists.
+
+    ``.venv/bin/python`` is often a symlink to the system interpreter.
+    Comparing resolved paths would skip the re-exec and lose the venv's
+    site-packages. ``sys.prefix`` is the venv only when that symlink is
+    the process executable.
+    """
+    if os.environ.get('AK_DEV_REEXEC') == '1':
+        return
+    venv_dir = ROOT / '.venv'
+    if not venv_dir.is_dir():
+        return
+    try:
+        if Path(sys.prefix).resolve() == venv_dir.resolve():
+            return
+    except OSError:
+        pass
+    candidates = (
+        venv_dir / 'bin' / 'python',
+        venv_dir / 'Scripts' / 'python.exe',
+    )
+    for candidate in candidates:
+        if candidate.is_file():
+            os.environ['AK_DEV_REEXEC'] = '1'
+            os.execv(str(candidate), [str(candidate), *sys.argv])
+
+
+def _listen(port: int) -> str:
+    """Bind IPv4 loopback, and IPv6 loopback when the host allows it."""
+    ipv4 = f'127.0.0.1:{port}'
+    try:
+        with socket.socket(socket.AF_INET6, socket.SOCK_STREAM) as sock:
+            sock.setsockopt(socket.IPPROTO_IPV6, socket.IPV6_V6ONLY, 1)
+            sock.bind(('::1', port))
+    except OSError:
+        return ipv4
+    return f'{ipv4} [::1]:{port}'
+
+
+def serve_http(port: int) -> None:
+    os.chdir(ROOT)
+    if str(ROOT) not in sys.path:
+        sys.path.insert(0, str(ROOT))
+
+    # After the venv re-exec in __main__. Importing here keeps a system
+    # python3 from failing before that re-exec.
+    from app import create_app
+    from waitress.server import create_server
+
+    listen = _listen(port)
+    app = create_app()
+    server = create_server(app, listen=listen, threads=4)
+    print(f'Serving on {listen}', flush=True)
+    print('Open http://127.0.0.1:%s' % port, flush=True)
+    server.run()
+
+
+def main(argv: list[str] | None = None) -> int:
+    parser = argparse.ArgumentParser(description='Run Aegis-KeePass locally.')
+    parser.add_argument(
+        '--http',
+        action='store_true',
+        help='Serve the Flask app with Waitress on loopback (no desktop window).',
+    )
+    parser.add_argument(
+        '--port',
+        type=int,
+        default=8580,
+        help='Port for --http (default: 8580).',
+    )
+    args = parser.parse_args(argv)
+    if args.port != 8580 and not args.http:
+        parser.error('--port requires --http')
+    if not 1 <= args.port <= 65535:
+        parser.error('--port must be between 1 and 65535')
+    if args.http:
+        serve_http(args.port)
+        return 0
+
+    desktop = ROOT / 'desktop_main.py'
+    os.chdir(ROOT)
+    os.execv(sys.executable, [sys.executable, str(desktop)])
+    return 0
+
+
+if __name__ == '__main__':
+    _prefer_venv()
+    raise SystemExit(main())

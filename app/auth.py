@@ -3,19 +3,15 @@
 from __future__ import annotations
 
 from functools import wraps
-from typing import Callable, Optional
+from typing import Callable
 
-from flask import current_app, g, jsonify, make_response, request
+from flask import current_app, g, jsonify, request
 
-from app.session import SessionData, SessionStore
+from app.session import SessionStore
 
 
 def get_session_store() -> SessionStore:
     return current_app.extensions['session_store']
-
-
-def get_current_session() -> Optional[SessionData]:
-    return getattr(g, 'session_data', None)
 
 
 def set_session_cookie(response, session_id: str):
