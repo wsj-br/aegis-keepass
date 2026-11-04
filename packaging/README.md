@@ -19,7 +19,7 @@ pip install -r requirements.txt -r requirements-desktop.txt
 
 | OS | Extra requirement |
 |----|-------------------|
-| **Linux** | GTK 3 + WebKitGTK + GObject introspection typelibs (and their ICU deps). The PyInstaller binary does **not** bundle GTK/ICU libraries or icon themes. |
+| **Linux** | GTK 3 + WebKitGTK + GObject introspection typelibs (and their ICU deps). The PyInstaller binary bundles the PyGObject (`gi`) Python module and does **not** bundle GTK/ICU libraries, typelibs, or icon themes. |
 | **Windows** | [Edge WebView2 Runtime](https://developer.microsoft.com/microsoft-edge/webview2/) (preinstalled on most Windows 10/11 systems). |
 | **macOS** | No extra packages; pywebview uses WKWebView. For a universal2 binary, use a universal2 CPython (GitHub Actions `setup-python` with `architecture: universal2`). |
 
@@ -33,7 +33,7 @@ sudo apt-get install -y \
   libwebkit2gtk-4.1-0
 ```
 
-**Linux — build or `python desktop_main.py`** (also needs headers / PyGObject):
+**Linux — build or `python desktop_main.py`** (PyGObject for the same Python):
 
 ```bash
 sudo apt-get install -y \
@@ -43,6 +43,14 @@ sudo apt-get install -y \
   pkg-config \
   python3-gi
 ```
+
+`python3-gi` installs into the distro interpreter (`/usr/lib/python3/dist-packages`), which a normal venv does not see. The desktop entrypoint and the PyInstaller spec pick up that `gi` package when its ABI matches the venv (typical local `python3 -m venv`). If it does not match — for example CI's Python 3.13 on Ubuntu 24.04, whose `python3-gi` is built for 3.12 — install PyGObject into that environment instead:
+
+```bash
+pip install 'PyGObject>=3.48,<3.52'
+```
+
+That pin stays on girepository-1.0. Building it from source also needs `libgirepository1.0-dev`, `libcairo2-dev`, and `gobject-introspection`.
 
 ## Local build
 

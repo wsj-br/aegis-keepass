@@ -26,6 +26,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - Linux desktop packages omit bundled icon themes/locales and GTK/ICU/WebKit shared libraries (use host packages instead) to cut download size; runtime/package docs list the required `apt` packages.
 
 ### Fixed
+- Linux desktop builds bundle PyGObject (`gi`) and load host GTK/WebKit typelibs, so the packaged binary starts when the venv cannot see Debian `python3-gi`.
 - Desktop Save dialog uses pywebview `FileDialog.SAVE` instead of the deprecated `SAVE_DIALOG` constant.
 - Desktop “System” theme now follows the host OS appearance (including Windows dark mode under WSL); WebKitGTK `prefers-color-scheme` alone was stuck on light. Falls back to dark when the OS preference cannot be detected.
 - Desktop theme toggle now cycles System → Light → Dark reliably when `localStorage` is unavailable in pywebview/WebKitGTK (was stuck after Light).

@@ -23,7 +23,7 @@ case "$(uname -s)" in
   Linux*)
     echo "Note: Linux desktop needs host GTK + WebKitGTK (not bundled in the binary)."
     echo "  Run:  sudo apt-get install -y gir1.2-gtk-3.0 gir1.2-webkit2-4.1 libgtk-3-0 libwebkit2gtk-4.1-0"
-    echo "  Build/dev also: libwebkit2gtk-4.1-dev pkg-config python3-gi"
+    echo "  Build/dev also needs python3-gi for this Python (or: pip install 'PyGObject>=3.48,<3.52')."
     ;;
   Darwin*)
     echo "Note: macOS build targets universal2 (requires a universal2 Python)."

@@ -189,9 +189,11 @@ Optional no-Docker distribution: a pywebview window around the same Flask UI, pa
 ```bash
 source .venv/bin/activate
 pip install -r requirements.txt -r requirements-desktop.txt
-# Linux host packages (GTK + WebKitGTK; not bundled into the PyInstaller binary):
+# Linux host packages (GTK + WebKitGTK; libraries are not bundled):
 #   sudo apt-get install -y gir1.2-gtk-3.0 gir1.2-webkit2-4.1 \
 #     libwebkit2gtk-4.1-dev pkg-config python3-gi
+# python3-gi is picked up automatically when its ABI matches the venv.
+# Otherwise: pip install 'PyGObject>=3.48,<3.52'
 python desktop_main.py
 ```
 

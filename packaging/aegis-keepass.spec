@@ -3,6 +3,8 @@
 
 from __future__ import annotations
 
+import importlib
+import importlib.util
 import os
 import re
 import sys
@@ -26,6 +28,77 @@ def _read_version() -> str:
     with open(path, encoding='utf-8') as fh:
         match = re.search(r'__version__\s*=\s*"([^"]+)"', fh.read())
     return match.group(1) if match else '0.0.0'
+
+
+def _linux_system_gi_dist() -> str | None:
+    """Distro PyGObject matching this interpreter, if the venv cannot import it."""
+    abi = f'cpython-{sys.version_info.major}{sys.version_info.minor}'
+    candidates = [
+        '/usr/lib/python3/dist-packages',
+        f'/usr/lib/python{sys.version_info.major}/dist-packages',
+        (
+            f'/usr/lib/python{sys.version_info.major}.'
+            f'{sys.version_info.minor}/dist-packages'
+        ),
+    ]
+    for candidate in candidates:
+        gi_dir = os.path.join(candidate, 'gi')
+        if not os.path.isdir(gi_dir):
+            continue
+        for name in os.listdir(gi_dir):
+            if name.startswith('_gi.') and abi in name:
+                return candidate
+    return None
+
+
+def _link_system_gi(vendor: str, dist: str) -> None:
+    os.makedirs(vendor, exist_ok=True)
+    gi_link = os.path.join(vendor, 'gi')
+    gi_target = os.path.join(dist, 'gi')
+    if os.path.lexists(gi_link) and os.path.realpath(gi_link) != os.path.realpath(gi_target):
+        os.remove(gi_link)
+    if not os.path.lexists(gi_link):
+        os.symlink(gi_target, gi_link)
+    for name in os.listdir(dist):
+        if not name.startswith('PyGObject-'):
+            continue
+        if not (name.endswith('.egg-info') or name.endswith('.dist-info')):
+            continue
+        link = os.path.join(vendor, name)
+        target = os.path.join(dist, name)
+        if os.path.lexists(link) and os.path.realpath(link) != os.path.realpath(target):
+            os.remove(link)
+        if not os.path.lexists(link):
+            os.symlink(target, link)
+
+
+def _linux_gi_pathex() -> list[str]:
+    """Make ``gi`` importable to PyInstaller on Linux.
+
+    A project venv does not see Debian ``python3-gi``. When the system copy
+    matches this interpreter's ABI, expose only that package (plus its
+    metadata, which PyInstaller's gi hook reads). CI Python builds that do
+    not match the distro ABI should ``pip install 'PyGObject>=3.48,<3.52'``.
+    """
+    if not sys.platform.startswith('linux'):
+        return []
+    if importlib.util.find_spec('gi') is not None:
+        return []
+    dist = _linux_system_gi_dist()
+    if dist is None:
+        abi = f'cpython-{sys.version_info.major}{sys.version_info.minor}'
+        raise SystemExit(
+            'Linux desktop build: this Python cannot import gi (PyGObject), '
+            f'and no system gi matching {abi} was found. Install '
+            "PyGObject into this environment (pip install 'PyGObject>=3.48,<3.52') "
+            'or install the distro python3-gi package built for the same Python.'
+        )
+    vendor = os.path.join(ROOT, 'build', 'gi-vendor')
+    _link_system_gi(vendor, dist)
+    sys.path.insert(0, vendor)
+    importlib.invalidate_caches()
+    print(f'Using system PyGObject from {dist}')
+    return [vendor]
 
 
 def _webview_platform_imports() -> list[str]:
@@ -141,6 +214,11 @@ hiddenimports = [
 datas += collect_data_files('webview')
 binaries += collect_dynamic_libs('webview')
 hiddenimports += _webview_platform_imports()
+if sys.platform.startswith('linux'):
+    # Frozen Linux builds must carry the gi extension. Typelibs stay on the host.
+    hiddenimports += ['gi']
+
+GI_PATHEX = _linux_gi_pathex()
 
 for pkg in ('cryptography', 'pykeepass'):
     pkg_datas, pkg_binaries, pkg_hidden = collect_all(pkg)
@@ -153,12 +231,20 @@ target_arch = 'universal2' if sys.platform == 'darwin' else None
 
 a = Analysis(
     [os.path.join(ROOT, 'desktop_main.py')],
-    pathex=[ROOT],
+    pathex=[ROOT, *GI_PATHEX],
     binaries=binaries,
     datas=datas,
     hiddenimports=hiddenimports,
     hookspath=[],
-    hooksconfig={},
+    # Skip the full Adwaita/icon/locale collect. Those trees are dropped below
+    # and the host GTK install provides them.
+    hooksconfig={
+        'gi': {
+            'icons': [],
+            'themes': [],
+            'languages': [],
+        },
+    },
     runtime_hooks=[],
     # setuptools/pkg_resources are unused by the app; collecting them with
     # modern setuptools often breaks the frozen binary (missing top-level jaraco).
