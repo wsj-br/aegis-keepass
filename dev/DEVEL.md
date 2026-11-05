@@ -124,18 +124,18 @@ This mode does not set `AK_DESKTOP`, so the pages say Upload / Download and the 
 ./scripts/build-desktop.sh
 ```
 
-On Linux and Windows this writes `dist/aegis-keepass` (or `.exe`). On macOS it also writes a drag-to-Applications DMG under `dist/`. See [packaging/README.md](../packaging/README.md).
+On Linux this writes `dist/aegis-keepass` and an AppImage beside it. A current Ubuntu, Debian, or Zorin OS desktop already has GTK 3 and WebKitGTK 4.1. On Windows the script writes `dist/aegis-keepass.exe` and an Inno Setup installer beside it. On macOS it also writes a drag-to-Applications DMG under `dist/`. See [packaging/README.md](../packaging/README.md).
 
 **CI / release artifacts:** publishing a GitHub Release (via `scripts/release.sh`) triggers [`.github/workflows/desktop-release.yml`](../.github/workflows/desktop-release.yml), which builds on native runners and uploads:
 
 | Artifact | Runner |
 |----------|--------|
-| `aegis-keepass-<ver>-linux-amd64.tar.gz` | `ubuntu-latest` |
-| `aegis-keepass-<ver>-linux-arm64.tar.gz` | `ubuntu-24.04-arm` |
+| `aegis-keepass-<ver>-linux-amd64.AppImage` | `ubuntu-latest` |
+| `aegis-keepass-<ver>-linux-arm64.AppImage` | `ubuntu-24.04-arm` |
 | `aegis-keepass-<ver>-macos-intel.dmg` | `macos-15-intel` |
 | `aegis-keepass-<ver>-macos-arm64.dmg` | `macos-15` |
-| `aegis-keepass-<ver>-windows-x64.zip` | `windows-latest` |
-| `aegis-keepass-<ver>-windows-arm64.zip` | `windows-11-arm` |
+| `aegis-keepass-<ver>-windows-x64.exe` | `windows-latest` |
+| `aegis-keepass-<ver>-windows-arm64.exe` | `windows-11-arm` |
 
 macOS artifacts include a `.dmg.sha256` file. `scripts/release.sh` does not upload binaries; the workflow does, after the release is published.
 
@@ -194,9 +194,9 @@ Version is defined in a single place: [`app/_version.py`](../app/_version.py).
 
 | Layer | Format | Example |
 |-------|--------|---------|
-| Git tag / GitHub Release | `vX.Y.Z` | `v0.1.6` |
-| `app/_version.py` / UI footer | `X.Y.Z` | `0.1.6` |
-| Release asset filenames | `aegis-keepass-X.Y.Z-<platform>` | `aegis-keepass-0.1.6-linux-amd64.tar.gz` |
+| Git tag / GitHub Release | `vX.Y.Z` | `v0.2.1` |
+| `app/_version.py` / UI footer | `X.Y.Z` | `0.2.1` |
+| Release asset filenames | `aegis-keepass-X.Y.Z-<platform>` | `aegis-keepass-0.2.1-linux-amd64.AppImage` |
 
 Publishing a GitHub Release triggers [`.github/workflows/desktop-release.yml`](../.github/workflows/desktop-release.yml), which builds the six desktop artifacts and attaches them to that release.
 
@@ -206,7 +206,7 @@ Before running the release script, use [`dev/release-new-version-prompt.md`](rel
 
 - Create `release-notes/RELEASE_NOTES_X.Y.Z.md` from the `[Unreleased]` section in `dev/CHANGELOG.md`
 - Move changelog entries into a versioned section with today's date
-- Match the format of prior release notes (highlights plus an Install section that names the six assets)
+- Match the format in the prompt: highlights (ending with a line linking to `dev/CHANGELOG.md` for the detailed changes), then an Install section last that names the six desktop assets
 
 Confirm the prerequisites listed in the prompt (version bump, notes file, clean tree) before continuing with the checklist below.
 
@@ -246,7 +246,7 @@ Confirm the prerequisites listed in the prompt (version bump, notes file, clean 
 
 6. **Watch CI**:
    - Actions: https://github.com/wsj-br/aegis-keepass/actions
-   - Confirm the six archives (and the two macOS `.dmg.sha256` files) appear on the GitHub Release
+   - Confirm the six desktop files (two AppImages, two installers, two DMGs, and the two macOS `.dmg.sha256` files) appear on the GitHub Release
 
 ### Release script options
 
@@ -265,12 +265,15 @@ Confirm the prerequisites listed in the prompt (version bump, notes file, clean 
 | `desktop_main.py` | Desktop entrypoint (Waitress + pywebview) |
 | `requirements.txt` | Python dependencies |
 | `requirements-desktop.txt` | Desktop shell deps (pywebview, waitress, pyinstaller) |
+| `requirements-dev.txt` | Test deps (pytest) |
 | `packaging/aegis-keepass.spec` | PyInstaller spec |
 | `packaging/dmg-background.tiff` | Arrow background for the macOS DMG |
 | `app/_version.py` | Version source of truth |
 | `scripts/version` | Print or set `app/_version.py` |
 | `scripts/dev` | Local desktop window, or `--http` loopback server |
 | `scripts/build-desktop.sh` | PyInstaller build; DMG on macOS |
+| `scripts/package-linux-appimage.sh` | Wrap the Linux build in an AppImage |
+| `scripts/package-windows-installer.ps1` | Build the Windows Inno Setup installer |
 | `scripts/release.sh` | GitHub Release that triggers desktop CI |
 | `scripts/update-notices.sh` | Regenerate root `NOTICES` |
 | `scripts/upgrade-dependencies.sh` | Upgrade pip and every `requirements*.txt` package |

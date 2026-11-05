@@ -1,5 +1,7 @@
 #!/usr/bin/env bash
 # Build a local desktop executable with PyInstaller.
+# On Linux, also write an AppImage under dist/.
+# On Windows, also write an Inno Setup installer under dist/.
 # On macOS, also write a drag-to-Applications DMG under dist/.
 # Run from the repo root (or any cwd; script cds to root).
 set -euo pipefail
@@ -29,20 +31,33 @@ echo "Using Python: ${PYTHON}"
 
 case "$(uname -s)" in
   Linux*)
-    echo "Note: Linux desktop needs host GTK + WebKitGTK (not bundled in the binary)."
-    echo "  Run:  sudo apt-get install -y gir1.2-gtk-3.0 gir1.2-webkit2-4.1 libgtk-3-0 libwebkit2gtk-4.1-0"
+    echo "Note: A current desktop already has GTK 3 and WebKitGTK 4.1."
+    echo "  Older desktops (Ubuntu 22.04, Zorin OS 17) also need: gir1.2-gtk-3.0 gir1.2-webkit2-4.1 libwebkit2gtk-4.1-0"
     echo "  Build/dev also needs python3-gi for this Python (or: pip install 'PyGObject>=3.48,<3.52')."
     ;;
   Darwin*)
     echo "Note: macOS build matches this Mac (Intel or Apple Silicon) and then writes a DMG."
     ;;
   MINGW*|MSYS*|CYGWIN*|Windows_NT)
-    echo "Note: Windows builds need Edge WebView2 Runtime (usually preinstalled)."
+    echo "Note: Windows builds an installer. The app still needs Edge WebView2 Runtime (usually preinstalled)."
     ;;
 esac
 
 rm -rf build dist
 "${PYTHON}" -m PyInstaller --noconfirm --clean packaging/aegis-keepass.spec
+
+if [[ "$(uname -s)" == "Linux" ]]; then
+  chmod +x scripts/package-linux-appimage.sh
+  ./scripts/package-linux-appimage.sh
+  exit 0
+fi
+
+case "$(uname -s)" in
+  MINGW*|MSYS*|CYGWIN*|Windows_NT)
+    powershell.exe -NoProfile -ExecutionPolicy Bypass -File scripts/package-windows-installer.ps1
+    exit 0
+    ;;
+esac
 
 if [[ "$(uname -s)" != "Darwin" ]]; then
   echo ""

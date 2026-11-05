@@ -284,7 +284,7 @@ components:
 
 **Creative North Star: "The Local Vault Desk"**
 
-A cool operate console for a single trusted localhost session. Surfaces stay quiet—paper-bright by day, deep slate desk by night—with one blue accent so the job (upload → review → download) stays legible and the security story never competes with chrome. The AK mark is the only ornamental signal; everything else reads as a careful toolshed UI for encrypted backups.
+A cool operate console for a single trusted localhost session. Surfaces stay quiet—paper-bright by day, deep slate desk by night—with one blue accent so the job (read → review → save in the desktop shell; upload → review → download on the web) stays legible and the security story never competes with chrome. The AK mark is the only ornamental signal; everything else reads as a careful toolshed UI for encrypted backups.
 
 Density favors task clarity over marketing: short headers, muted supporting copy, compact toolbars, and a data table as the review workspace. Status color (green / red / amber) carries match state; the primary blue is reserved for progress, focus, and the decisive actions that move the session forward. Visual restraint is the trust model: no spectacle, no decorative depth theater, no brand voice louder than the product name.
 

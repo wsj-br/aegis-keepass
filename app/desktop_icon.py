@@ -46,6 +46,11 @@ def _data_home() -> Path:
 
 
 def _launch_command() -> str:
+    # The AppImage runtime sets APPIMAGE to the file the user launched.
+    # sys.executable is the temporary mount and disappears when the app exits.
+    appimage = os.environ.get('APPIMAGE', '').strip()
+    if appimage:
+        return shlex.quote(appimage)
     if getattr(sys, 'frozen', False):
         return shlex.quote(sys.executable)
     entry = Path(__file__).resolve().parents[1] / 'desktop_main.py'

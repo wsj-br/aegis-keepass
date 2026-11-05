@@ -45,3 +45,14 @@ def test_linux_desktop_entry_points_at_the_logo(monkeypatch, tmp_path):
     assert f"Icon={icon}\n" in text
     assert f"StartupWMClass={APP_ID}\n" in text
     assert "Name=Aegis-KeePass OTP Sync\n" in text
+
+
+def test_linux_desktop_entry_uses_the_appimage_path(monkeypatch, tmp_path):
+    monkeypatch.setenv("XDG_DATA_HOME", str(tmp_path))
+    monkeypatch.setenv("APPIMAGE", "/home/user/aegis-keepass.AppImage")
+    monkeypatch.setattr(sys, "platform", "linux")
+    from app.desktop_icon import install_linux_desktop_entry
+
+    desktop = install_linux_desktop_entry()
+    text = desktop.read_text(encoding="utf-8")
+    assert "Exec=/home/user/aegis-keepass.AppImage\n" in text

@@ -1,7 +1,5 @@
 # Product
 
-<!-- impeccable:product-schema 1 -->
-
 ## Platform
 
 desktop
@@ -12,7 +10,7 @@ People who already use Aegis Authenticator and KeePass, KeePassXC, or a compatib
 
 ## Product Purpose
 
-Import and sync TOTP secrets from an encrypted Aegis backup into a KeePass `.kdbx` database. The implemented flow is upload → review matches → download a merged database. Success means the user can confirm matches (and fix misses), receive native KeePass `TimeOtp-*` fields on the right entries, and end the session with sensitive data wiped.
+Import and sync TOTP secrets from an encrypted Aegis backup into a KeePass `.kdbx` database. The implemented flow is read → review matches → save a merged database (the loopback web fallback labels the same steps upload → review → download). Success means the user can confirm matches (and fix misses), receive native KeePass `TimeOtp-*` fields on the right entries, and leave the session with sensitive data wiped on save or session end.
 
 ## Positioning
 

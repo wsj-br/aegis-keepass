@@ -23,35 +23,35 @@ Designed for single-user use on your own computer. Files are decrypted only in m
 
 ## Install
 
-Download the build that matches your computer from the [latest GitHub Release](https://github.com/wsj-br/aegis-keepass/releases/latest). Replace `<ver>` with the release version (for example `0.1.6`).
+Download the build that matches your computer from the [latest GitHub Release](https://github.com/wsj-br/aegis-keepass/releases/latest). Replace `<ver>` with the release version (for example `0.2.1`).
 
 | Platform | Asset |
 |----------|-------|
-| Linux AMD64 | `aegis-keepass-<ver>-linux-amd64.tar.gz` |
-| Linux ARM64 | `aegis-keepass-<ver>-linux-arm64.tar.gz` |
+| Linux AMD64 | `aegis-keepass-<ver>-linux-amd64.AppImage` |
+| Linux ARM64 | `aegis-keepass-<ver>-linux-arm64.AppImage` |
 | macOS Intel | `aegis-keepass-<ver>-macos-intel.dmg` |
 | macOS Apple Silicon | `aegis-keepass-<ver>-macos-arm64.dmg` |
-| Windows x64 | `aegis-keepass-<ver>-windows-x64.zip` |
-| Windows ARM | `aegis-keepass-<ver>-windows-arm64.zip` |
+| Windows x64 | `aegis-keepass-<ver>-windows-x64.exe` |
+| Windows ARM | `aegis-keepass-<ver>-windows-arm64.exe` |
 
-Pick the row that matches the machine, not the one that is merely newest. An Intel Mac cannot run the Apple Silicon disk image, and a Windows ARM PC needs the ARM zip.
+Pick the row that matches the machine, not the one that is merely newest. An Intel Mac cannot run the Apple Silicon disk image, and a Windows ARM PC needs the ARM installer.
 
 ### Linux
 
-The archive contains `aegis-keepass`, plus `LICENSE` and `NOTICES`. The binary does not include GTK or WebKit; install those first (Debian/Ubuntu):
+Mark the AppImage executable and run it. A current Ubuntu, Debian, or Zorin OS desktop already includes GTK 3 and WebKitGTK 4.1.
 
 ```bash
-sudo apt-get install -y \
-  gir1.2-gtk-3.0 \
-  gir1.2-webkit2-4.1 \
-  libgtk-3-0 \
-  libwebkit2gtk-4.1-0
-tar -xzf aegis-keepass-<ver>-linux-amd64.tar.gz
-chmod +x aegis-keepass-*/aegis-keepass
-./aegis-keepass-*/aegis-keepass
+chmod +x aegis-keepass-<ver>-linux-amd64.AppImage
+./aegis-keepass-<ver>-linux-amd64.AppImage
 ```
 
-Use the `linux-arm64` archive on ARM. Other distributions need the same GTK 3 and WebKitGTK 4.1 libraries under their own package names.
+If the window does not open and the terminal mentions WebKit or `gi`, the desktop is missing WebKitGTK 4.1. That is typical of Ubuntu 22.04 and Zorin OS 17:
+
+```bash
+sudo apt-get install -y gir1.2-gtk-3.0 gir1.2-webkit2-4.1 libwebkit2gtk-4.1-0
+```
+
+Use the `linux-arm64` AppImage on ARM. Other distributions need the same GTK 3 and WebKitGTK 4.1 libraries under their own package names.
 
 ### macOS
 
@@ -61,7 +61,9 @@ The build is not signed. The first time you launch it, right-click the app, choo
 
 ### Windows
 
-Unzip the archive and run `aegis-keepass.exe`. [Edge WebView2 Runtime](https://developer.microsoft.com/microsoft-edge/webview2/) is required and is already installed on most Windows 10 and 11 systems. Use the `windows-arm64` zip on Windows ARM and the `windows-x64` zip on 64-bit Intel or AMD PCs.
+Run the installer. It installs for the current user and adds a Start menu shortcut. [Edge WebView2 Runtime](https://developer.microsoft.com/microsoft-edge/webview2/) is required and is already installed on most Windows 10 and 11 systems.
+
+The file is unsigned, so SmartScreen may need **More info**, then **Run anyway**. The x64 installer only runs on Intel or AMD PCs, and the ARM installer only runs on Windows ARM.
 
 ## First run
 
@@ -70,7 +72,7 @@ Unzip the archive and run `aegis-keepass.exe`. [Edge WebView2 Runtime](https://d
 3. **Read** your encrypted Aegis backup (`.json`) and KeePass database (`.kdbx`). Enter the Aegis backup password, the KeePass master password, and a keyfile if the database uses one.
 4. **Review** automatic matches. Link anything left over by hand, and resolve conflicts before applying changes.
 5. **Save** with **Save merged database**. Choose where to write the merged `.kdbx` (the suggested name is `keepass-merged.kdbx`).
-6. **End the session** when you are done. Session data is wiped from memory. Open the saved database in KeePass or KeePassXC and confirm the TOTP fields before you retire the backup copy.
+6. **Start new merge** when you are done. Session data is wiped from memory as soon as you save. Open the saved database in KeePass or KeePassXC and confirm the TOTP fields before you retire the backup copy. (During review, **End session** wipes the session and returns to the first screen.)
 
 ## Requirements
 
@@ -146,8 +148,8 @@ Uploads larger than the in-memory threshold (32 MB combined) are encrypted and w
 
 | Issue | What to try |
 |-------|-------------|
-| Linux window does not open | Install GTK 3 and WebKitGTK 4.1 (see [Linux](#linux)). A missing typelib usually shows up as a WebKit or `gi` error in the terminal. |
-| Windows window does not open | Install the [Edge WebView2 Runtime](https://developer.microsoft.com/microsoft-edge/webview2/). Confirm you unpacked the zip that matches x64 or ARM. |
+| Linux window does not open | A current desktop already has GTK 3 and WebKitGTK 4.1. If the terminal mentions WebKit or `gi`, install WebKitGTK 4.1 (see [Linux](#linux)). |
+| Windows window does not open | Install the [Edge WebView2 Runtime](https://developer.microsoft.com/microsoft-edge/webview2/). Confirm you ran the installer that matches x64 or ARM. |
 | macOS says the app cannot be opened | The build is unsigned. Right-click **Open**, then **Open Anyway** in **System Settings → Privacy & Security**. |
 | Wrong-architecture download | Use the asset whose name matches your CPU: `linux-amd64`, `linux-arm64`, `macos-intel`, `macos-arm64`, `windows-x64`, or `windows-arm64`. |
 | Files rejected | Confirm the Aegis file is an **encrypted** backup and the KeePass file is a valid `.kdbx`. Check file sizes against `MAX_UPLOAD_BYTES`. |

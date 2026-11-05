@@ -93,18 +93,20 @@ aegis_keepass_lib.py     ← Aegis decrypt/parse, KeePass I/O, matching, OTP app
 app/
   __init__.py            ← App factory, config, blueprint registration
   session.py             ← In-memory session state and secure wipe lifecycle
-  secure.py              ← SecureBytes, spill-to-/tmp encryption, memory wipe
+  secure.py              ← SecureBytes, spill-to-system-temp encryption, memory wipe
   auth.py                ← Session cookie helpers and route guards
   routes/
-    upload.py            ← Upload page + POST /api/upload
-    review.py            ← Review UI + match/apply/download/end-session APIs
+    upload.py            ← Upload page + upload/process APIs
+    review.py            ← Review UI + match/apply/save/end-session APIs
   templates/             ← Jinja2 HTML (upload.html, review.html, base.html)
-  static/js/             ← upload.js, review.js (fetch calls to /api/*)
+  static/js/             ← upload.js, review.js, theme.js, toast.js (fetch calls to /api/*)
   static/css/app.css     ← Styles
 desktop_main.py          ← Desktop entry: Waitress + pywebview shell
 app/desktop_api.py       ← JS bridge (native Save dialog for merged .kdbx)
-packaging/               ← PyInstaller spec and DMG background
-scripts/                 ← version, dev, build-desktop, release, notices, upgrade-dependencies
+app/desktop_icon.py      ← Window/package icon (PNG→ICO, Linux desktop entry)
+app/system_theme.py      ← Host OS light/dark detection for the desktop shell
+packaging/               ← PyInstaller spec, Inno Setup script, DMG background
+scripts/                 ← version, dev, build-desktop, release, notices, upgrade-dependencies, package scripts
 ```
 
 | Task | Primary files |
@@ -113,7 +115,7 @@ scripts/                 ← version, dev, build-desktop, release, notices, upgr
 | KeePass open/save / TOTP fields | `aegis_keepass_lib.py` (`KeePassKdbx`, `KeePassUpdater`) |
 | Fuzzy matching / re-import by UUID | `aegis_keepass_lib.py` (`EntryMatcher`, `MatchResult`) |
 | Upload validation and ingestion | `app/routes/upload.py` |
-| Review UI, manual links, download | `app/routes/review.py`, `app/templates/review.html`, `app/static/js/review.js` |
+| Review UI, manual links, save | `app/routes/review.py`, `app/templates/review.html`, `app/static/js/review.js` |
 | Upload UI and client-side checks | `app/templates/upload.html`, `app/static/js/upload.js` |
 | Session timeout, state, wipe on end | `app/session.py`, `app/secure.py` |
 | Desktop shell / packaging | `desktop_main.py`, `app/desktop_api.py`, `packaging/`, `scripts/build-desktop.sh`, `requirements-desktop.txt` |
@@ -199,7 +201,7 @@ Expect `200`. Use this after `./scripts/dev --http` is running.
 | Review route / `review.js` / matching | Review page shows matches; manual link works; conflicts surfaced |
 | `aegis_keepass_lib.py` (matching) | Auto-match quality; `AegisUUID` in Notes respected on re-import |
 | `aegis_keepass_lib.py` (KeePass) | Downloaded `.kdbx` opens; `TimeOtp-*` fields present on matched entries |
-| Session / secure / auth | **End session** returns to upload; idle timeout behaves if touched |
+| Session / secure / auth | **Save**, **Start new merge**, and **End session** return to the upload page with the session wiped; idle timeout behaves if touched |
 | Templates / CSS only | Visual check in the desktop window or `./scripts/dev --http`; no broken layout or JS console errors |
 | Packaging / release assets | `./scripts/build-desktop.sh` produces a host binary; macOS also produces a DMG |
 
@@ -207,7 +209,7 @@ Full end-to-end smoke (when touching core flow):
 
 1. Start the app with `./scripts/dev` or `./scripts/dev --http`.
 2. Upload **copies** of an encrypted Aegis `.json` and a `.kdbx` (never commit real files).
-3. Complete review; download merged database.
+3. Complete review; save the merged database.
 4. Confirm session ends cleanly.
 
 Use **copies** of real backups only on localhost. Do not add sample vaults to the repo.
@@ -224,6 +226,8 @@ If you cannot run `pytest` or the app (missing deps, no display for the desktop 
 | [`dev/release-new-version-prompt.md`](dev/release-new-version-prompt.md) | Step-by-step prompt for preparing a new release |
 | [`dev/CHANGELOG.md`](dev/CHANGELOG.md) | Change history (maintained by agents and developers) |
 | [`README.md`](README.md) | User-facing overview and quick start |
+| [`PRODUCT.md`](PRODUCT.md) | Product definition (purpose, users, constraints) |
+| [`DESIGN.md`](DESIGN.md) | UI design tokens and component conventions |
 | [`app/_version.py`](app/_version.py) | Single source of truth for release version |
 
 ## General principles

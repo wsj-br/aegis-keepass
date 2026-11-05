@@ -16,18 +16,18 @@ pip install -r requirements.txt -r requirements-desktop.txt
 
 | OS | Extra requirement |
 |----|-------------------|
-| **Linux** | GTK 3 + WebKitGTK + GObject introspection typelibs (and their ICU deps). The PyInstaller binary bundles the PyGObject (`gi`) Python module and does **not** bundle GTK/ICU libraries, typelibs, or icon themes. |
-| **Windows** | [Edge WebView2 Runtime](https://developer.microsoft.com/microsoft-edge/webview2/) (preinstalled on most Windows 10/11 systems). |
+| **Linux** | GTK 3 and WebKitGTK 4.1 from the host. A current Ubuntu, Debian, or Zorin OS desktop already has them. The image bundles the PyGObject (`gi`) Python module and does **not** bundle GTK/ICU libraries, typelibs, or icon themes. |
+| **Windows** | [Edge WebView2 Runtime](https://developer.microsoft.com/microsoft-edge/webview2/) (preinstalled on most Windows 10/11 systems). The release file is an Inno Setup installer, not a zip. |
 | **macOS** | No extra packages; pywebview uses WKWebView. The build matches the Mac it is built on (Intel or Apple Silicon) and is wrapped in a DMG. |
 
-**Linux — run a packaged binary** (Debian/Ubuntu):
+**Linux — run a packaged binary** (Debian/Ubuntu/Zorin):
+
+A current desktop already has GTK 3 and WebKitGTK 4.1.
+
+Ubuntu 22.04 and Zorin OS 17 have WebKitGTK 4.0, so install 4.1 before the window will open:
 
 ```bash
-sudo apt-get install -y \
-  gir1.2-gtk-3.0 \
-  gir1.2-webkit2-4.1 \
-  libgtk-3-0 \
-  libwebkit2gtk-4.1-0
+sudo apt-get install -y gir1.2-gtk-3.0 gir1.2-webkit2-4.1 libwebkit2gtk-4.1-0
 ```
 
 **Linux — build or `./scripts/dev`** (PyGObject for the same Python):
@@ -61,7 +61,8 @@ The Linux build strips bundled `share/icons` / locales / themes and GTK/ICU/WebK
 
 Output is under `dist/`:
 
-- Linux/Windows: `dist/aegis-keepass` (or `aegis-keepass.exe`)
+- Linux: `dist/aegis-keepass` and `dist/aegis-keepass-<ver>-linux-amd64.AppImage` or `linux-arm64.AppImage` (`scripts/package-linux-appimage.sh`, using appimagetool 1.9.1)
+- Windows: `dist/aegis-keepass.exe` and `dist/aegis-keepass-<ver>-windows-x64.exe` or `windows-arm64.exe` (`scripts/package-windows-installer.ps1`, using the 64-bit Inno Setup 7.1.1 compiler)
 - macOS: `dist/Aegis-KeePass OTP Sync.app`, plus `dist/aegis-keepass-<ver>-macos-arm64.dmg` or `macos-intel.dmg` and a `.dmg.sha256` file
 
 The disk image uses `dmgbuild` 1.6.5 (installed into `build/dmg-py` on first use, not the project venv). It opens with the app on the left, an arrow, and an Applications shortcut on the right. A DMG can only be built on macOS.
@@ -86,11 +87,11 @@ Then open [http://127.0.0.1:8580](http://127.0.0.1:8580). `./scripts/dev` uses `
 
 | Artifact | Runner |
 |----------|--------|
-| `aegis-keepass-<ver>-windows-x64.zip` | `windows-latest` |
-| `aegis-keepass-<ver>-windows-arm64.zip` | `windows-11-arm` |
-| `aegis-keepass-<ver>-linux-amd64.tar.gz` | `ubuntu-latest` |
-| `aegis-keepass-<ver>-linux-arm64.tar.gz` | `ubuntu-24.04-arm` |
+| `aegis-keepass-<ver>-windows-x64.exe` | `windows-latest` |
+| `aegis-keepass-<ver>-windows-arm64.exe` | `windows-11-arm` |
+| `aegis-keepass-<ver>-linux-amd64.AppImage` | `ubuntu-latest` |
+| `aegis-keepass-<ver>-linux-arm64.AppImage` | `ubuntu-24.04-arm` |
 | `aegis-keepass-<ver>-macos-intel.dmg` (+ `.sha256`) | `macos-15-intel` |
 | `aegis-keepass-<ver>-macos-arm64.dmg` (+ `.sha256`) | `macos-15` |
 
-`scripts/release.sh` publishes the GitHub Release. The workflow attaches these files afterward. Linux and Windows archives include `LICENSE` and `NOTICES` beside the binary. On macOS those files are inside the `.app`.
+`scripts/release.sh` publishes the GitHub Release. The workflow attaches these files afterward. The Linux AppImage includes `LICENSE` and `NOTICES` under `usr/share/doc/aegis-keepass/`. The Windows installer copies those files next to `aegis-keepass.exe` and adds a Start menu shortcut for the current user. On macOS they are inside the `.app`. Windows installers are built with the 64-bit [Inno Setup](https://jrsoftware.org/isinfo.php) 7.1.1 compiler so the same script runs on the x64 and ARM runners.

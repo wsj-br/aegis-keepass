@@ -2,6 +2,10 @@
 #
 # Native runners only (no QEMU):
 #   Linux AMD64, Linux ARM64, macOS Intel, macOS ARM64, Windows x64, Windows ARM64.
+# Linux jobs wrap the PyInstaller binary with scripts/package-linux-appimage.sh
+# (aegis-keepass-<version>-linux-amd64.AppImage / linux-arm64.AppImage).
+# Windows jobs wrap it with scripts/package-windows-installer.ps1
+# (aegis-keepass-<version>-windows-x64.exe / windows-arm64.exe).
 # macOS jobs call scripts/build-desktop.sh, which also writes a DMG.
 
 name: Desktop Release
@@ -79,7 +83,7 @@ jobs:
         uses: actions/checkout@v7
 
       - name: Set up Python
-        uses: actions/setup-python@v5
+        uses: actions/setup-python@v7
         with:
           python-version: ${{ env.PYTHON_VERSION }}
 
@@ -119,29 +123,32 @@ jobs:
           chmod +x scripts/version scripts/build-desktop.sh
           ./scripts/build-desktop.sh
 
-      - name: Package artifact (Windows)
+      - name: Package artifact (Windows installer)
         if: runner.os == 'Windows'
         shell: pwsh
         run: |
+          ./scripts/package-windows-installer.ps1
           $ver = "${{ needs.prepare.outputs.version }}"
-          $name = "aegis-keepass-$ver-${{ matrix.asset_suffix }}"
-          New-Item -ItemType Directory -Force -Path "artifact/$name" | Out-Null
-          Copy-Item dist/aegis-keepass.exe "artifact/$name/"
-          Copy-Item LICENSE,NOTICES "artifact/$name/" -ErrorAction SilentlyContinue
-          Compress-Archive -Path "artifact/$name/*" -DestinationPath "artifact/$name.zip"
-          echo "ASSET_PATH=artifact/$name.zip" >> $env:GITHUB_ENV
+          # asset_suffix is already "windows-x64" or "windows-arm64".
+          $asset = "dist/aegis-keepass-$ver-${{ matrix.asset_suffix }}.exe"
+          if (-not (Test-Path -LiteralPath $asset -PathType Leaf)) {
+            throw "Missing installer: $asset"
+          }
+          echo "ASSET_PATH=$asset" >> $env:GITHUB_ENV
+          echo "Uploading $asset"
 
-      - name: Package artifact (Linux)
+      - name: Package artifact (Linux AppImage)
         if: runner.os == 'Linux'
         run: |
+          chmod +x scripts/version scripts/package-linux-appimage.sh
+          ./scripts/package-linux-appimage.sh
           VER="${{ needs.prepare.outputs.version }}"
-          NAME="aegis-keepass-${VER}-${{ matrix.asset_suffix }}"
-          mkdir -p "artifact/${NAME}"
-          cp dist/aegis-keepass "artifact/${NAME}/"
-          cp LICENSE NOTICES "artifact/${NAME}/" 2>/dev/null || true
-          chmod +x "artifact/${NAME}/aegis-keepass"
-          tar -C artifact -czf "artifact/${NAME}.tar.gz" "${NAME}"
-          echo "ASSET_PATH=artifact/${NAME}.tar.gz" >> "$GITHUB_ENV"
+          # asset_suffix is already "linux-amd64" or "linux-arm64".
+          ASSET="dist/aegis-keepass-${VER}-${{ matrix.asset_suffix }}.AppImage"
+          test -f "$ASSET"
+          test -x "$ASSET"
+          echo "ASSET_PATH=${ASSET}" >> "$GITHUB_ENV"
+          echo "Uploading ${ASSET}"
 
       - name: Locate macOS artifacts
         if: runner.os == 'macOS'
@@ -155,7 +162,7 @@ jobs:
 
       - name: Upload to GitHub Release
         if: runner.os != 'macOS'
-        uses: softprops/action-gh-release@v2
+        uses: softprops/action-gh-release@v3
         with:
           tag_name: ${{ needs.prepare.outputs.tag }}
           files: ${{ env.ASSET_PATH }}
@@ -165,7 +172,7 @@ jobs:
 
       - name: Upload macOS DMG
         if: runner.os == 'macOS'
-        uses: softprops/action-gh-release@v2
+        uses: softprops/action-gh-release@v3
         with:
           tag_name: ${{ needs.prepare.outputs.tag }}
           files: |

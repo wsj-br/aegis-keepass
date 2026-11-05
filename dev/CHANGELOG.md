@@ -7,17 +7,23 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+
+## [0.2.1] - 2026-11-05
+
 ### Added
 - Desktop app (`desktop_main.py` + pywebview + Waitress) is how the product runs. `scripts/dev` opens that window; `scripts/dev --http` serves the same Flask app on loopback for local checks.
 - `scripts/version` prints the version from `app/_version.py` and, given `MAJOR.MINOR.PATCH`, updates that file.
 - `scripts/upgrade-dependencies.sh` upgrades pip (plus setuptools and wheel) and every package in the repo-root `requirements*.txt` files, then regenerates `NOTICES`.
-- Release builds for six native targets: Linux AMD64, Linux ARM64, macOS Intel, macOS Apple Silicon, Windows x64, and Windows ARM. macOS ships a drag-to-Applications DMG (with a `.sha256` file) instead of a zip.
+- Release builds for six native targets: Linux AMD64, Linux ARM64, macOS Intel, macOS Apple Silicon, Windows x64, and Windows ARM. Linux ships an AppImage. Windows ships an Inno Setup installer. macOS ships a drag-to-Applications DMG (with a `.sha256` file).
 - Desktop Save dialog uses a native file dialog via `window.pywebview.api.download_merged`.
 
 ### Changed
+- Linux install notes no longer tell desktops to install GTK or WebKit. A current Ubuntu, Debian, or Zorin OS desktop already includes them. Ubuntu 22.04 and Zorin OS 17 still need WebKitGTK 4.1.
+- Desktop release workflow uses `actions/setup-python` v7 and `softprops/action-gh-release` v3. Builds stay on native GitHub-hosted runners (no QEMU).
 - The desktop window uses the app logo. On Linux, a desktop entry with that logo is registered so GNOME shows it instead of the generic gear icon. Windows and macOS packages embed the same logo.
 - Waitress no longer prints "Task queue depth is N" when the window loads its local files.
 - Install and developer docs describe the desktop download only. Helper scripts live under `scripts/` (`version`, `dev`, `build-desktop.sh`, `release.sh`, `update-notices.sh`).
+- Refreshed docs to the current implementation: the agent codebase map lists `theme.js`/`toast.js`, `app/system_theme.py`, `app/desktop_icon.py`, and save/end-session APIs; the `dev/DEVEL.md` project layout includes the platform packagers and test requirements; `PRODUCT.md` and `DESIGN.md` describe the read → review → save flow; removed the leftover Impeccable schema marker from `PRODUCT.md`.
 - Web UI uses the same compact viewport-fit shell as the desktop app on fine pointers (no page scrollbar; table scrolls); touch phones keep a roomier scrollable layout.
 - Increased type sizes on the fine-pointer web compact shell for readability (desktop densified scale unchanged).
 - Encrypted upload spill temp directories now use the platform default temp location instead of hardcoding `/tmp` (Windows-safe).
@@ -27,10 +33,13 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - Desktop shell uses Read / Save terminology for step 1 and step 3 (and related CTAs). `./scripts/dev --http` keeps Upload / Download.
 - Upload, review, and completion surfaces are flat full-bleed panels (no nested content cards); the match table uses denser type, padding, and column widths for the narrower desktop window.
 - PyInstaller desktop spec collects only desktop pywebview backends (skips Android/Kivy), includes `app.system_theme`, and excludes unused `setuptools`/`pkg_resources` so the frozen binary starts cleanly.
-- Linux desktop packages omit bundled icon themes/locales and GTK/ICU/WebKit shared libraries (use host packages instead) to cut download size; runtime/package docs list the required `apt` packages.
+- Linux AppImages omit bundled icon themes/locales and GTK/ICU/WebKit shared libraries (use host packages instead) to cut download size.
 - Documented upgrading Python packages in an existing venv (`pip install --upgrade -r …`) in `dev/DEVEL.md`.
+- Documented that the Windows installer is unsigned (SmartScreen: **More info**, then **Run anyway**) and that the x64 installer runs only on Intel or AMD PCs and the ARM installer only on Windows ARM.
+- Release-notes prompt is desktop-only and keeps only `## Highlights` (ending with a pointer to `dev/CHANGELOG.md`) plus the `## Install` section (six download assets, Linux/macOS/Windows steps) as the last section; the full `## Changes` copy is no longer duplicated into the notes.
 
 ### Fixed
+- Stale version examples (`0.1.6` → `0.2.1`) corrected in `README.md` and `dev/DEVEL.md`, and the README **First run** step now says saving wipes the session, with **Start new merge** (or **End session** during review) returning to the first screen.
 - `./scripts/upgrade-dependencies.sh` regenerates `NOTICES` in a clean environment, so it no longer fails when the project virtualenv does not have `pip-licenses`.
 - Linux desktop builds bundle PyGObject (`gi`) and load host GTK/WebKit typelibs, so the packaged binary starts when the venv cannot see Debian `python3-gi`.
 - Desktop Save dialog uses pywebview `FileDialog.SAVE` instead of the deprecated `SAVE_DIALOG` constant.
