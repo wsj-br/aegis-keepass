@@ -7,6 +7,8 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+### Fixed
+- Desktop release workflow no longer fails on Windows runners: the dependency-install step used bash-only `if [ ... ]` syntax that PowerShell could not parse. The Linux-only PyGObject install is now its own `runner.os == 'Linux'` step.
 
 ## [0.2.1] - 2026-11-05
 
