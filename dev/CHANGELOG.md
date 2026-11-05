@@ -9,6 +9,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Fixed
 - Desktop release workflow no longer fails on Windows runners: the dependency-install step used bash-only `if [ ... ]` syntax that PowerShell could not parse. The Linux-only PyGObject install is now its own `runner.os == 'Linux'` step.
+- Windows ARM64 release build now installs again: `cryptography` publishes no `win_arm64` wheels for 46.0.4+ (source-only, failing on the runner for lack of OpenSSL), so `requirements.txt` now pins `cryptography==46.0.3` (the last release with a `win_arm64` wheel, compatible with Python 3.13) on Windows ARM64 via an environment marker; all other platforms keep the `cryptography>=49.0.0` floor.
 
 ## [0.2.1] - 2026-11-05
 
