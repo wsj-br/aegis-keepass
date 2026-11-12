@@ -130,7 +130,7 @@ On Linux this writes `dist/aegis-keepass` and an AppImage beside it. A current U
 
 | Artifact | Runner |
 |----------|--------|
-| `aegis-keepass-<ver>-linux-amd64.AppImage` | `ubuntu-latest` |
+| `aegis-keepass-<ver>-linux-amd64.AppImage` | `ubuntu-22.04` |
 | `aegis-keepass-<ver>-linux-arm64.AppImage` | `ubuntu-24.04-arm` |
 | `aegis-keepass-<ver>-macos-intel.dmg` | `macos-15-intel` |
 | `aegis-keepass-<ver>-macos-arm64.dmg` | `macos-15` |
@@ -143,20 +143,20 @@ macOS artifacts include a `.dmg.sha256` file. `scripts/release.sh` does not uplo
 
 ### 1. Automated suite (pytest)
 
-With the venv activated and `requirements-dev.txt` installed:
+With `requirements-dev.txt` installed (the script uses `.venv` when that directory exists):
 
 ```bash
-pytest
+./scripts/test
 ```
 
-This runs library unit tests and Flask API/integration tests under `tests/`. Synthetic encrypted Aegis and KeePass fixtures are generated at runtime (no vault files are committed). Prefer `pytest` after non-trivial changes to matching, upload/review routes, or session/secure code.
+This runs library unit tests and Flask API/integration tests under `tests/`. Synthetic encrypted Aegis and KeePass fixtures are generated at runtime (no vault files are committed). Prefer `./scripts/test` after non-trivial changes to matching, upload/review routes, or session/secure code.
 
-Useful variants:
+Extra arguments are passed through to pytest:
 
 ```bash
-pytest -q
-pytest tests/unit
-pytest tests/integration
+./scripts/test -q
+./scripts/test tests/unit
+./scripts/test tests/integration
 ```
 
 ### 2. Syntax / import check
@@ -271,6 +271,7 @@ Confirm the prerequisites listed in the prompt (version bump, notes file, clean 
 | `app/_version.py` | Version source of truth |
 | `scripts/version` | Print or set `app/_version.py` |
 | `scripts/dev` | Local desktop window, or `--http` loopback server |
+| `scripts/test` | Run pytest (uses `.venv` when present; extra args go to pytest) |
 | `scripts/build-desktop.sh` | PyInstaller build; DMG on macOS |
 | `scripts/package-linux-appimage.sh` | Wrap the Linux build in an AppImage |
 | `scripts/package-windows-installer.ps1` | Build the Windows Inno Setup installer |

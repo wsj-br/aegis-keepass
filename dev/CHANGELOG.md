@@ -7,6 +7,15 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [0.2.3] - 2026-11-12
+
+### Added
+- `./scripts/test` runs the pytest suite from the repo root, using `.venv` when it exists and forwarding extra arguments to pytest.
+
+### Fixed
+- Linux AppImages no longer bundle `liblcms2`, which could override the host WebKitGTK dependency with a build requiring a newer glibc and prevent startup. AMD64 release builds use the Ubuntu 22.04 compatibility baseline instead of `ubuntu-latest`; both Linux architectures smoke-test the packaged GI/WebKit and upload-page startup before upload.
+- Linux fallback desktop entries use desktop-entry argument quoting for AppImage paths containing spaces and preserve existing manager-created entries instead of overwriting their metadata. AppImage desktop metadata explicitly includes the application version.
+
 ## [0.2.2] - 2026-11-12
 
 ### Changed

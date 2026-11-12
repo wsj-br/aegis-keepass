@@ -1,0 +1,34 @@
+#!/usr/bin/env bash
+# Run the pytest suite from the repository root.
+#
+# Uses .venv when it exists. Extra arguments are passed to pytest.
+#
+#   ./scripts/test
+#   ./scripts/test -q
+#   ./scripts/test tests/unit
+#   ./scripts/test tests/integration
+set -euo pipefail
+
+ROOT="$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)"
+cd "$ROOT"
+
+fail() {
+  echo "Error: $*" >&2
+  exit 1
+}
+
+if [[ -x "${ROOT}/.venv/bin/python" ]]; then
+  PYTHON="${ROOT}/.venv/bin/python"
+elif [[ -x "${ROOT}/.venv/Scripts/python.exe" ]]; then
+  PYTHON="${ROOT}/.venv/Scripts/python.exe"
+else
+  PYTHON="$(command -v python3 || true)"
+fi
+
+[[ -n "$PYTHON" && -x "$PYTHON" ]] || fail "Python not executable: ${PYTHON:-<none>}"
+
+if ! "$PYTHON" -c 'import pytest' >/dev/null 2>&1; then
+  fail "pytest is not installed for ${PYTHON}. Install dev dependencies: pip install -r requirements.txt -r requirements-dev.txt"
+fi
+
+exec "$PYTHON" -m pytest "$@"

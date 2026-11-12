@@ -3,7 +3,6 @@
 from __future__ import annotations
 
 import os
-import shlex
 import shutil
 import struct
 import sys
@@ -45,16 +44,28 @@ def _data_home() -> Path:
     return Path.home() / '.local' / 'share'
 
 
+def _desktop_exec_arg(value: str) -> str:
+    """Quote one Exec argument (desktop-entry syntax, not shell syntax)."""
+    # Percent introduces field codes even inside quotes. Backslashes must
+    # survive both desktop string unescaping and Exec argument unescaping.
+    value = value.replace('%', '%%')
+    value = value.replace('\\', '\\\\\\\\')
+    for char in ('"', '`', '$'):
+        value = value.replace(char, '\\\\' + char)
+    value = value.replace('\n', r'\n').replace('\r', r'\r').replace('\t', r'\t')
+    return f'"{value}"'
+
+
 def _launch_command() -> str:
     # The AppImage runtime sets APPIMAGE to the file the user launched.
     # sys.executable is the temporary mount and disappears when the app exits.
     appimage = os.environ.get('APPIMAGE', '').strip()
     if appimage:
-        return shlex.quote(appimage)
+        return _desktop_exec_arg(appimage)
     if getattr(sys, 'frozen', False):
-        return shlex.quote(sys.executable)
+        return _desktop_exec_arg(sys.executable)
     entry = Path(__file__).resolve().parents[1] / 'desktop_main.py'
-    return f'{shlex.quote(sys.executable)} {shlex.quote(str(entry))}'
+    return f'{_desktop_exec_arg(sys.executable)} {_desktop_exec_arg(str(entry))}'
 
 
 def install_linux_desktop_entry() -> Path | None:
@@ -78,6 +89,11 @@ def install_linux_desktop_entry() -> Path | None:
 
     desktop = data_home / 'applications' / f'{APP_ID}.desktop'
     desktop.parent.mkdir(parents=True, exist_ok=True)
+    # AppManager and other integrators own this file when they create it.
+    # Register a fallback for window identity, but never replace their launch
+    # command, version, update metadata, or uninstall action.
+    if desktop.exists():
+        return desktop
     contents = (
         '[Desktop Entry]\n'
         'Type=Application\n'
@@ -88,8 +104,7 @@ def install_linux_desktop_entry() -> Path | None:
         'Terminal=false\n'
         'Categories=Utility;\n'
     )
-    if not desktop.is_file() or desktop.read_text(encoding='utf-8') != contents:
-        desktop.write_text(contents, encoding='utf-8')
+    desktop.write_text(contents, encoding='utf-8')
     return desktop
 
 

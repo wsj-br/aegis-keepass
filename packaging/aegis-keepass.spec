@@ -143,6 +143,9 @@ _DROP_LIB_PREFIXES = (
     'libharfbuzz',
     'libicu',
     'libjavascriptcoregtk-',
+    # WebKit loads the host color-management library. A bundled copy can
+    # require a newer glibc than the host (v0.2.2 required GLIBC_2.43).
+    'liblcms2.so',
     'libpango',
     'librsvg-',
     'libsoup-',
@@ -256,8 +259,10 @@ a = Analysis(
 )
 
 # Prefer host GTK/WebKit/ICU + icon themes (documented runtime deps on Linux).
-a.datas, dropped_data = _filter_toc(a.datas, _drop_data)
-a.binaries, dropped_bin = _filter_toc(a.binaries, _drop_binary)
+dropped_data = dropped_bin = 0
+if sys.platform.startswith('linux'):
+    a.datas, dropped_data = _filter_toc(a.datas, _drop_data)
+    a.binaries, dropped_bin = _filter_toc(a.binaries, _drop_binary)
 print(
     f'Packaging trim: removed {dropped_data} data entries and '
     f'{dropped_bin} bundled native libs (icons/themes/GTK/ICU/WebKit).'

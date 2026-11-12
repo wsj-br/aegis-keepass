@@ -152,6 +152,19 @@ def main() -> int:
     )
     from app.system_theme import prepare_desktop_system_theme
 
+    if sys.platform.startswith('linux') and sys.argv[1:] == ['--smoke-test']:
+        # Exercise the frozen GI/WebKit dependency chain before publishing
+        # an artifact, without writing desktop entries or opening vaults.
+        use_linux_app_id()
+        webkit = importlib.import_module('gi.repository.WebKit2')
+        if webkit.get_major_version() <= 0:
+            raise RuntimeError('Packaged WebKitGTK version probe failed')
+        with create_app().test_client() as client:
+            if client.get('/').status_code != 200:
+                raise RuntimeError('Packaged upload page failed to load')
+        print('AppImage smoke test passed (WebKitGTK and upload page).')
+        return 0
+
     # GNOME ignores a GTK window icon and shows a gear until a desktop entry
     # with the same app id exists. Publish that entry before the window opens.
     install_linux_desktop_entry()

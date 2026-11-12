@@ -76,6 +76,7 @@ Icon=${APP_ID}
 StartupWMClass=${APP_ID}
 Categories=Utility;
 Terminal=false
+X-AppImage-Version=${VERSION}
 EOF
 cp "${APPDIR}/${APP_ID}.desktop" "${APPDIR}/usr/share/applications/${APP_ID}.desktop"
 

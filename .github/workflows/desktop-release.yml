@@ -69,7 +69,8 @@ jobs:
             asset_suffix: windows-x64
           - runner: windows-11-arm
             asset_suffix: windows-arm64
-          - runner: ubuntu-latest
+          # Keep the Linux ABI baseline stable; do not follow ubuntu-latest.
+          - runner: ubuntu-24.04
             asset_suffix: linux-amd64
           - runner: ubuntu-24.04-arm
             asset_suffix: linux-arm64
@@ -99,6 +100,7 @@ jobs:
             libgirepository1.0-dev \
             libcairo2-dev \
             gobject-introspection
+          sudo apt-get install -y xvfb xauth
 
       - name: Install Python dependencies
         if: runner.os != 'macOS'
@@ -151,6 +153,16 @@ jobs:
           test -x "$ASSET"
           echo "ASSET_PATH=${ASSET}" >> "$GITHUB_ENV"
           echo "Uploading ${ASSET}"
+
+      - name: Smoke test Linux AppImage
+        if: runner.os == 'Linux'
+        run: |
+          # Test the packaged dependency chain, not the source checkout.
+          # A filename with spaces reproduces AppManager's install naming.
+          TEST_DIR="$(mktemp -d)"
+          cp "$ASSET_PATH" "$TEST_DIR/Aegis-KeePass OTP Sync"
+          APPIMAGE_EXTRACT_AND_RUN=1 xvfb-run -a \
+            timeout 60 "$TEST_DIR/Aegis-KeePass OTP Sync" --smoke-test
 
       - name: Locate macOS artifacts
         if: runner.os == 'macOS'

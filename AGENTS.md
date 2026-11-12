@@ -106,7 +106,7 @@ app/desktop_api.py       ← JS bridge (native Save dialog for merged .kdbx)
 app/desktop_icon.py      ← Window/package icon (PNG→ICO, Linux desktop entry)
 app/system_theme.py      ← Host OS light/dark detection for the desktop shell
 packaging/               ← PyInstaller spec, Inno Setup script, DMG background
-scripts/                 ← version, dev, build-desktop, release, notices, upgrade-dependencies, package scripts
+scripts/                 ← version, dev, test, build-desktop, release, notices, upgrade-dependencies, package scripts
 ```
 
 | Task | Primary files |
@@ -165,11 +165,11 @@ Agents must run the checks below after non-trivial edits and report what they ra
 
 ### 1. Automated suite (preferred)
 
-With venv activated and `requirements-dev.txt` installed, from repo root:
+`./scripts/test` uses `.venv` when that directory exists. Install dev dependencies once, or after they change:
 
 ```bash
 pip install -r requirements.txt -r requirements-dev.txt   # once, or after dep changes
-pytest
+./scripts/test
 ```
 
 Tests live under `tests/` (unit + Flask integration). Fixtures generate synthetic encrypted Aegis/KeePass data at runtime — do not commit real vaults. Fix failing tests before proceeding.
