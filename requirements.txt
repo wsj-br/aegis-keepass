@@ -6,7 +6,7 @@ flask>=3.1.0
 # openssl-sys crate finds no OpenSSL installation. 46.0.3 is the last release
 # with a win_arm64 wheel (cp311-abi3, works on Python 3.13). The app only
 # uses AESGCM/Scrypt, which 46.0.3 fully supports.
-cryptography>=49.0.0; platform_machine != "ARM64" or platform_system != "Windows"
+cryptography>=50.0.0; platform_machine != "ARM64" or platform_system != "Windows"
 cryptography==46.0.3; platform_machine == "ARM64" and platform_system == "Windows"
 rapidfuzz>=3.14.0
 pykeepass>=4.0.7
